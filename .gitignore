@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Environment secrets — never commit real .env
+.env
+backend/.env
+
+# Build output
+frontend/dist/
+frontend/build/
+
+# Uploaded CSV files
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Test coverage
+coverage/
