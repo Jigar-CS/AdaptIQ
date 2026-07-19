@@ -11,13 +11,30 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('student','admin') NOT NULL DEFAULT 'student',
   is_active BOOLEAN DEFAULT TRUE,
+
+  -- Profile fields (students only)
+  phone VARCHAR(20) NULL,
+  college VARCHAR(150) NULL,
+  branch VARCHAR(100) NULL,
+  graduation_year YEAR NULL,
+  cgpa DECIMAL(4,2) NULL,
+  linkedin_url VARCHAR(255) NULL,
+  profile_photo_path VARCHAR(500) NULL   COMMENT 'Relative path to uploaded profile photo',
+  resume_path VARCHAR(500) NULL          COMMENT 'Relative path to uploaded resume PDF',
+
+  -- Profile completion gate
+  profile_prompt_triggered BOOLEAN DEFAULT FALSE
+    COMMENT 'Set TRUE after student completes 3rd topic_adaptive test',
+  is_profile_complete BOOLEAN DEFAULT FALSE
+    COMMENT 'Set TRUE automatically when all required profile fields are filled',
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_email (email),
   INDEX idx_role (role)
 );
 ```
-*Note:* Single `users` table with a `role` enum, rather than a separate `admins` table — avoids duplicating auth logic. If admin-only fields grow (e.g. permissions), split into `admin_profiles` later.
+*Note:* Profile fields are NULL for admin accounts and are never validated for them. `is_profile_complete` is computed server-side on every profile update — it becomes `TRUE` when `phone`, `college`, `branch`, `graduation_year`, `cgpa`, `profile_photo_path`, and `resume_path` are all non-NULL.
 
 ## 2. Topics
 ```sql
@@ -58,16 +75,21 @@ CREATE TABLE questions (
 CREATE TABLE tests (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  test_type ENUM('practice','adaptive','company') NOT NULL,
+  test_type ENUM('topic_adaptive','full_adaptive','company') NOT NULL
+    COMMENT 'topic_adaptive = single-topic scoped adaptive session; full_adaptive = cross-topic adaptive session; company = company mock test',
+  topic_id INT NULL COMMENT 'set only if test_type = topic_adaptive; NULL for full_adaptive and company tests',
   company_test_id INT NULL COMMENT 'set only if test_type = company',
   status ENUM('in_progress','completed','abandoned') DEFAULT 'in_progress',
   started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE SET NULL,
   FOREIGN KEY (company_test_id) REFERENCES company_tests(id) ON DELETE SET NULL,
-  INDEX idx_user_type (user_id, test_type)
+  INDEX idx_user_type (user_id, test_type),
+  INDEX idx_user_topic (user_id, topic_id)
 );
 ```
+*Note:* There is no non-adaptive `practice` test type — all student-facing tests use the adaptive engine. The `topic_id` field scopes question selection for topic-wise sessions.
 
 ## 5. TestQuestions
 Join table tracking which questions were served in which test, in what order, at what difficulty (important for adaptive test history).
@@ -125,15 +147,15 @@ CREATE TABLE performance (
 
 ## 8. PlacementScore
 Stores a **history** of scores (not just latest) to support trend graphs.
+Recalculated **only after a Miscellaneous (`full_adaptive`) test batch completes** — topic-wise tests do not trigger recalculation.
 ```sql
 CREATE TABLE placement_score (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   score DECIMAL(5,2) NOT NULL,
-  accuracy_component DECIMAL(5,2) NOT NULL,
-  speed_component DECIMAL(5,2) NOT NULL,
-  difficulty_mastery_component DECIMAL(5,2) NOT NULL,
-  topic_coverage_component DECIMAL(5,2) NOT NULL,
+  accuracy_component DECIMAL(5,2) NOT NULL   COMMENT '60% weight — correct % in full_adaptive sessions',
+  speed_component DECIMAL(5,2) NOT NULL      COMMENT '20% weight — normalized response time score',
+  difficulty_mastery_component DECIMAL(5,2) NOT NULL COMMENT '20% weight — % of Hard questions correct in full_adaptive',
   calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_user_time (user_id, calculated_at)

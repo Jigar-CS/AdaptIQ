@@ -27,11 +27,30 @@ Response envelope (all endpoints):
 | DELETE | `/admin/users/:id` | Admin | Soft-delete user |
 
 ## Profile (Student)
+> **Profile Completion Gate:** After completing the **3rd topic-wise test**, all test-start endpoints return `403 PROFILE_INCOMPLETE` until the profile is fully filled in.
+
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| GET | `/profile` | Student | Get own profile |
-| PUT | `/profile` | Student | Update name/email |
-| PUT | `/profile/password` | Student | Change password |
+| GET | `/profile` | Student | Get own profile (includes `is_profile_complete`, `profile_prompt_triggered`) |
+| PUT | `/profile` | Student | Update text fields: `{ name, email, phone, college, branch, graduation_year, cgpa, linkedin_url }` |
+| PUT | `/profile/password` | Student | Change password: `{ current_password, new_password }` |
+| POST | `/profile/photo` | Student | Upload profile photo (multipart/form-data, image file); returns `profile_photo_path` |
+| POST | `/profile/resume` | Student | Upload resume (multipart/form-data, PDF only); returns `resume_path` |
+
+**Required fields for `is_profile_complete = true`:**
+`phone`, `college`, `branch`, `graduation_year`, `cgpa`, `profile_photo_path`, `resume_path`
+
+**Profile gate 403 response shape:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PROFILE_INCOMPLETE",
+    "message": "Please complete your profile to continue taking tests.",
+    "data": { "is_profile_complete": false, "profile_prompt_triggered": true }
+  }
+}
+```
 
 ## Topics
 | Method | Endpoint | Auth | Description |
@@ -66,21 +85,19 @@ Response envelope (all endpoints):
 }
 ```
 
-## Practice (Non-Adaptive)
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/practice/start` | Student | Body: `{topic_id, difficulty, count}` → creates a `test` (type=practice), returns question set |
-| POST | `/practice/:testId/answer` | Student | Submit one answer: `{question_id, selected_option, response_time_seconds}` |
-| POST | `/practice/:testId/complete` | Student | Marks test completed, triggers performance recalculation |
-
 ## Adaptive Test
+> **All student-facing tests are adaptive.** There is no separate non-adaptive practice mode.
+> Supplying `topic_id` in the body creates a **topic-scoped** session (`test_type = 'topic_adaptive'`).
+> Omitting `topic_id` creates a **cross-topic** session (`test_type = 'full_adaptive'`).
+> Both modes run the same adaptive engine (`services/adaptiveEngine.js`).
+
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| POST | `/adaptive/start` | Student | Body: `{topic_id}` → creates adaptive test session, starts at Easy or last-known difficulty |
-| GET | `/adaptive/:testId/next-batch` | Student | Returns next 5 questions at current difficulty |
-| POST | `/adaptive/:testId/answer` | Student | Submit answer; every 5th answer triggers engine evaluation |
-| GET | `/adaptive/:testId/status` | Student | Current difficulty, batch number, running accuracy |
-| POST | `/adaptive/:testId/complete` | Student | Ends session, triggers Placement Score recalculation |
+| POST | `/adaptive/start` | Student | Body: `{ topic_id? }` — `topic_id` optional. Creates adaptive test session, starts at Easy or last-known difficulty for the topic |
+| GET | `/adaptive/:testId/next-batch` | Student | Returns next 5 questions at current difficulty (scoped to `topic_id` if topic session) |
+| POST | `/adaptive/:testId/answer` | Student | Submit answer: `{ question_id, selected_option, response_time_seconds }`; every 5th answer triggers engine evaluation |
+| GET | `/adaptive/:testId/status` | Student | Current difficulty, batch number, running accuracy, `topic_id` (if scoped), `test_type` |
+| POST | `/adaptive/:testId/complete` | Student | Ends session; triggers Performance update + Placement Score recalculation |
 
 ## Placement Score
 | Method | Endpoint | Auth | Description |
@@ -89,13 +106,17 @@ Response envelope (all endpoints):
 | GET | `/placement-score/history` | Student | Score history for trend graph |
 
 ## Company Tests
+> **Unlock condition (both required):**
+> 1. Student has completed **≥ 5 Miscellaneous (`full_adaptive`) tests**
+> 2. **Placement Readiness Score ≥ 80**
+
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| GET | `/company-tests` | Student | List available company tests (with lock/unlock status) |
+| GET | `/company-tests` | Student | List company tests; response includes `{ locked: true/false, misc_tests_completed: N, placement_score: X, unlock_message: "..." }` |
 | POST | `/admin/company-tests` | Admin | Create company test config |
 | PUT | `/admin/company-tests/:id` | Admin | Update config |
 | POST | `/admin/company-tests/:id/questions` | Admin | Attach questions to a company test |
-| POST | `/company-tests/:id/start` | Student | Blocked with `403` + unlock message if score < 80 |
+| POST | `/company-tests/:id/start` | Student | `403` with `unlock_message` if conditions unmet — two distinct cases: (1) `"Complete at least 5 Miscellaneous tests to unlock"` when misc_count < 5; (2) `"Your score is X/100. Reach 80 to unlock."` when count ≥ 5 but score < 80 |
 | POST | `/company-tests/:testId/answer` | Student | Submit answer within timed session |
 | POST | `/company-tests/:testId/complete` | Student | Submit test, returns result analysis |
 
