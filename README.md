@@ -33,14 +33,15 @@ AdaptIQ is a full-stack web application that helps engineering students prepare 
 
 | Feature | Description |
 |---|---|
-| 🔄 **Adaptive Testing** | Difficulty auto-adjusts every 5 questions based on accuracy + speed |
+| 🔄 **Adaptive Testing** | Difficulty auto-adjusts every 5 questions in **all** test modes — topic-wise and full adaptive — using the same rule-based engine |
 | 📊 **Placement Readiness Score** | Composite score (0–100) gating access to company mock tests |
-| 🏢 **Company Mock Tests** | Timed tests modeled on TCS, Infosys, Accenture, etc. (score-gated at 80%) |
+| 🏢 **Company Mock Tests** | Timed tests modeled on TCS, Infosys, Accenture, etc. (score-gated at 80% + min 5 misc tests) |
 | 📥 **Bulk CSV Import** | Admin uploads up to 600+ questions per topic with full validation & duplicate detection |
 | 📈 **Performance Analytics** | Accuracy charts, topic breakdowns, score trend graphs via Recharts |
 | 💡 **Smart Recommendations** | Rule-based suggestions highlighting weak topics and difficulty gaps |
 | 🔐 **Role-Based Access** | Separate Student and Admin roles with JWT-protected routes |
 | 🛡️ **Security First** | Parameterized queries, bcrypt, helmet.js, rate limiting on auth endpoints |
+| 👤 **Profile Completion Gate** | After 3 topic-wise tests, students must upload photo & resume and fill placement details before continuing |
 
 ---
 
@@ -274,8 +275,8 @@ Base URL: `/api` | Auth: `Authorization: Bearer <jwt>` on all protected routes.
 | Student Profile | `/profile` | Student |
 | Topics | `/topics`, `/admin/topics` | Student / Admin |
 | Questions | `/admin/questions` | Admin |
-| Practice (Non-Adaptive) | `/practice` | Student |
-| Adaptive Test | `/adaptive` | Student |
+| Practice (Non-Adaptive) | ~~`/practice`~~ | *(removed — all tests are adaptive)* |
+| Adaptive Test (Topic or Full) | `/adaptive` | Student |
 | Placement Score | `/placement-score` | Student |
 | Company Tests | `/company-tests`, `/admin/company-tests` | Student / Admin |
 | Performance & Analytics | `/performance`, `/admin/analytics` | Student / Admin |
@@ -332,23 +333,23 @@ ELSE:
 
 ## 📊 Placement Readiness Score
 
-Recalculated after every completed adaptive batch and persisted to `placement_score` (history, not just latest):
+Recalculated after every completed **Miscellaneous (full_adaptive) test batch** and persisted to `placement_score` (history, not just latest). **Topic-wise tests do not affect this score.**
 
 ```
-score = (accuracy × 0.5)
+score = (accuracy × 0.6)
       + (speedScore × 0.2)
       + (difficultyMastery × 0.2)
-      + (topicCoverage × 0.1)
 ```
 
 | Component | Weight | Definition |
 |---|---|---|
-| `accuracy` | 50% | Overall correct % across all attempts |
-| `speedScore` | 20% | Normalized against expected time per difficulty |
-| `difficultyMastery` | 20% | % of Hard-level questions answered correctly |
-| `topicCoverage` | 10% | Fraction of 10 topics attempted with sufficient volume |
+| `accuracy` | 60% | Correct % across all Miscellaneous (full_adaptive) attempts |
+| `speedScore` | 20% | Normalized against expected time per difficulty (0–1, higher = faster) |
+| `difficultyMastery` | 20% | % of Hard-level questions answered correctly in full_adaptive sessions |
 
-> **Score ≥ 80** unlocks Company Mock Tests. Students below 80 see a detailed score breakdown so they know exactly what to improve.
+> **Score ≥ 80 AND ≥ 5 Miscellaneous tests completed** unlocks Company Mock Tests.
+> - If < 5 misc tests done → *"Complete at least 5 Miscellaneous tests to unlock"*
+> - If 5+ tests done but score < 80 → shows full score breakdown so students know exactly what to improve.
 
 ---
 
@@ -362,8 +363,8 @@ score = (accuracy × 0.5)
 | **Phase 4** | 3 | Admin panel: topic/question/user CRUD |
 | **Phase 5** | 3–4 | CSV bulk import with validation + import report |
 | **Phase 6** | 4 | Student dashboard shell + profile page |
-| **Phase 7** | 5 | Topic-wise non-adaptive practice mode |
-| **Phase 8** | 6 | **Adaptive engine** — core feature |
+| **Phase 7** | 5 | Topic-wise adaptive test — same engine, topic-scoped sessions |
+| **Phase 8** | 6 | **Adaptive engine** — unified service for topic & full adaptive modes |
 | **Phase 9** | 7 | Placement Readiness Score calculation |
 | **Phase 10** | 8 | Company mock tests + score-gated unlock |
 | **Phase 11** | 9 | Analytics dashboard + charts + recommendations |
