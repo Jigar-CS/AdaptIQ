@@ -6,7 +6,6 @@ const authRoutes    = require('./authRoutes');
 const adminRoutes   = require('./adminRoutes');
 const studentRoutes = require('./studentRoutes');
 
-<<<<<<< HEAD
 // Health check — pings DB to confirm connection
 router.get('/health', async (req, res) => {
   try {
@@ -14,31 +13,6 @@ router.get('/health', async (req, res) => {
     res.json({ success: true, data: { status: 'ok', db: 'ok', timestamp: new Date().toISOString() } });
   } catch (err) {
     res.status(503).json({ success: false, data: { status: 'error', db: 'unreachable' }, message: err.message });
-=======
-// Health check — pings the DB connection pool
-router.get('/health', async (req, res) => {
-  try {
-    const [rows] = await pool.execute('SELECT 1 AS ok');
-    const dbOk = rows && rows[0]?.ok === 1;
-    res.json({
-      success: true,
-      data: {
-        status: 'ok',
-        db: dbOk ? 'ok' : 'error',
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (err) {
-    res.status(503).json({
-      success: false,
-      data: {
-        status: 'degraded',
-        db: 'error',
-        timestamp: new Date().toISOString(),
-      },
-      error: { code: 'DB_UNAVAILABLE', message: err.message },
-    });
->>>>>>> 1826be6 (Updated Phase 1 & 2)
   }
 });
 

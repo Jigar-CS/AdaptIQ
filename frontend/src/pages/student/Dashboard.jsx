@@ -1,12 +1,5 @@
-<<<<<<< HEAD
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-=======
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import profileService from '../../services/profileService';
->>>>>>> 1826be6 (Updated Phase 1 & 2)
 import styles from './Dashboard.module.css';
 
 const NAV_LINKS = [
@@ -26,27 +19,7 @@ const STAT_CARDS = [
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
-<<<<<<< HEAD
   const navigate = useNavigate();
-=======
-  const [prompted, setPrompted] = useState(false);
-  const [profileComplete, setProfileComplete] = useState(true);
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const profile = await profileService.getProfile();
-        setPrompted(profile.profile_prompt_triggered);
-        setProfileComplete(profile.is_profile_complete);
-      } catch {
-        setPrompted(false);
-      }
-    };
-    loadProfile();
-  }, []);
->>>>>>> 1826be6 (Updated Phase 1 & 2)
 
   const handleLogout = async () => {
     await logout();
@@ -83,21 +56,6 @@ const Dashboard = () => {
           </div>
         </header>
 
-<<<<<<< HEAD
-=======
-        {prompted && !profileComplete ? (
-          <section className={styles.section} style={{ background: 'rgba(255,92,92,0.1)', border: '1px solid rgba(255,92,92,0.2)', padding: '18px 24px', borderRadius: '16px', marginBottom: '24px' }}>
-            <h2 style={{ margin: 0, color: 'var(--color-danger)' }}>Complete your profile to continue adaptive testing</h2>
-            <p className="text-sm" style={{ marginTop: 8 }}>
-              You have been asked to finish your profile after your recent topic tests. Upload your photo, resume, and profile details on the Profile page.
-            </p>
-            <button className="btn btn-primary mt-4" onClick={() => navigate('/profile')}>
-              Go to Profile
-            </button>
-          </section>
-        ) : null}
-
->>>>>>> 1826be6 (Updated Phase 1 & 2)
         {/* Stats Grid */}
         <section className={styles.statsGrid}>
           {STAT_CARDS.map((card) => (
