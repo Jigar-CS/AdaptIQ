@@ -1,10 +1,6 @@
 const User = require('../models/User');
-<<<<<<< HEAD
-const { success } = require('../utils/responseFormatter');
-=======
 const { success, error } = require('../utils/responseFormatter');
 const { hashPassword, comparePassword } = require('../utils/hashUtils');
->>>>>>> 1826be6 (Updated Phase 1 & 2)
 
 const getProfile = async (req, res, next) => {
   try {
@@ -17,11 +13,6 @@ const getProfile = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-<<<<<<< HEAD
-    const { name, email } = req.body;
-    await User.updateProfile(req.user.id, { name, email });
-    return success(res, {}, 'Profile updated successfully');
-=======
     const {
       name,
       email,
@@ -46,15 +37,11 @@ const updateProfile = async (req, res, next) => {
 
     const user = await User.findById(req.user.id);
     return success(res, { user }, 'Profile updated successfully');
->>>>>>> 1826be6 (Updated Phase 1 & 2)
   } catch (err) {
     next(err);
   }
 };
 
-<<<<<<< HEAD
-module.exports = { getProfile, updateProfile };
-=======
 const updatePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -111,4 +98,3 @@ module.exports = {
   uploadProfilePhoto,
   uploadResume,
 };
->>>>>>> 1826be6 (Updated Phase 1 & 2)

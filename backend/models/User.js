@@ -1,7 +1,5 @@
 const pool = require('../config/db');
 
-<<<<<<< HEAD
-=======
 const REQUIRED_PROFILE_FIELDS = [
   'phone',
   'college',
@@ -31,7 +29,6 @@ const buildProfileSelect = `
   updated_at
 `;
 
->>>>>>> 1826be6 (Updated Phase 1 & 2)
 const User = {
   /** Find a user by email */
   findByEmail: async (email) => {
@@ -45,9 +42,6 @@ const User = {
   /** Find a user by ID */
   findById: async (id) => {
     const [rows] = await pool.execute(
-<<<<<<< HEAD
-      'SELECT id, name, email, role, created_at FROM users WHERE id = ? AND is_active = TRUE LIMIT 1',
-=======
       `SELECT ${buildProfileSelect} FROM users WHERE id = ? AND is_active = TRUE LIMIT 1`,
       [id]
     );
@@ -58,7 +52,6 @@ const User = {
   findByIdWithPassword: async (id) => {
     const [rows] = await pool.execute(
       'SELECT id, password_hash FROM users WHERE id = ? AND is_active = TRUE LIMIT 1',
->>>>>>> 1826be6 (Updated Phase 1 & 2)
       [id]
     );
     return rows[0] || null;
@@ -74,12 +67,6 @@ const User = {
   },
 
   /** Update profile fields */
-<<<<<<< HEAD
-  updateProfile: async (id, { name, email }) => {
-    await pool.execute(
-      'UPDATE users SET name = ?, email = ? WHERE id = ?',
-      [name, email, id]
-=======
   updateProfile: async (id, fields = {}) => {
     const allowed = [
       'name',
@@ -116,7 +103,6 @@ const User = {
     await pool.execute(
       'UPDATE users SET is_profile_complete = ? WHERE id = ?',
       [isComplete ? 1 : 0, id]
->>>>>>> 1826be6 (Updated Phase 1 & 2)
     );
   },
 
@@ -127,8 +113,6 @@ const User = {
       [password_hash, id]
     );
   },
-<<<<<<< HEAD
-=======
 
   updatePhotoPath: async (id, path) => {
     await pool.execute(
@@ -174,7 +158,6 @@ const User = {
       [id]
     );
   },
->>>>>>> 1826be6 (Updated Phase 1 & 2)
 };
 
 module.exports = User;

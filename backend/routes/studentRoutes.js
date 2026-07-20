@@ -1,14 +1,4 @@
 const express = require('express');
-<<<<<<< HEAD
-const router = express.Router();
-const authenticate = require('../middleware/authenticate');
-const userController = require('../controllers/userController');
-const topicController = require('../controllers/topicController');
-
-// Profile
-router.get('/profile',     authenticate, userController.getProfile);
-router.put('/profile',     authenticate, userController.updateProfile);
-=======
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
@@ -101,7 +91,6 @@ router.post('/profile/resume', authenticate, (req, res, next) => resumeUpload(re
   }
   next();
 }), userController.uploadResume);
->>>>>>> 1826be6 (Updated Phase 1 & 2)
 
 // Topics (shared Student + Admin read)
 router.get('/topics', authenticate, topicController.getAllTopics);
@@ -113,11 +102,7 @@ router.post('/practice/start',               authenticate, stub('Practice not ye
 router.post('/practice/:testId/answer',      authenticate, stub('Practice not yet implemented'));
 router.post('/practice/:testId/complete',    authenticate, stub('Practice not yet implemented'));
 
-<<<<<<< HEAD
-router.post('/adaptive/start',               authenticate, stub('Adaptive engine not yet implemented'));
-=======
 router.post('/adaptive/start',               authenticate, profileGate, stub('Adaptive engine not yet implemented'));
->>>>>>> 1826be6 (Updated Phase 1 & 2)
 router.get('/adaptive/:testId/next-batch',   authenticate, stub('Adaptive engine not yet implemented'));
 router.post('/adaptive/:testId/answer',      authenticate, stub('Adaptive engine not yet implemented'));
 router.get('/adaptive/:testId/status',       authenticate, stub('Adaptive engine not yet implemented'));
