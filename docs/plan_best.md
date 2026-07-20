@@ -34,6 +34,7 @@ Build strictly in phase order below — later phases depend on earlier ones (the
 | Dashboards | `Dashboard.jsx` (student) and `AdminDashboard.jsx` — shells with stub data |
 | Stub routes | All future routes stubbed with `{ success: true, message: 'Not yet implemented' }` |
 
+<<<<<<< HEAD
 ### ❌ Not Yet Done
 - Profile fields in DB + profile completion gate
 - `schema.sql` migration to match current design decisions
@@ -49,6 +50,8 @@ Build strictly in phase order below — later phases depend on earlier ones (the
 ---
 
 ## 3. Phase-by-Phase Plan
+=======
+>>>>>>> 1826be6 (Updated Phase 1 & 2)
 
 ### Phase 1 — Database Migration & Schema Sync
 > `schema.sql` exists but is out of sync with current design decisions.

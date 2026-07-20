@@ -1,9 +1,23 @@
 require('./config/env'); // validates env vars before anything else
 
+<<<<<<< HEAD
+=======
+const fs = require('fs');
+const path = require('path');
+>>>>>>> 1826be6 (Updated Phase 1 & 2)
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
+<<<<<<< HEAD
+=======
+const { CLIENT_ORIGIN, UPLOAD_DIR } = require('./config/env');
+
+const uploadDir = path.join(__dirname, UPLOAD_DIR);
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+>>>>>>> 1826be6 (Updated Phase 1 & 2)
 const { apiLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
 const routes = require('./routes/index');
@@ -15,7 +29,11 @@ app.use(helmet());
 
 // CORS — allow frontend dev server
 app.use(cors({
+<<<<<<< HEAD
   origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+=======
+  origin: CLIENT_ORIGIN,
+>>>>>>> 1826be6 (Updated Phase 1 & 2)
   credentials: true,
 }));
 
@@ -26,6 +44,13 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+<<<<<<< HEAD
+=======
+// Serve uploaded files (profile photos, resumes) as static assets
+// Files are stored under /uploads/<uuid>.<ext>
+app.use('/uploads', express.static(path.join(__dirname, UPLOAD_DIR)));
+
+>>>>>>> 1826be6 (Updated Phase 1 & 2)
 // Global rate limiter
 app.use('/api', apiLimiter);
 

@@ -19,8 +19,14 @@ pool.getConnection()
     conn.release();
   })
   .catch((err) => {
+<<<<<<< HEAD
     console.error('❌ MySQL connection failed:', err.message);
     process.exit(1);
+=======
+    console.error('❌ MySQL connection failed (continuing without DB):', err.message);
+    // Do not exit the process here so the dev server can still run for frontend work.
+    // Runtime DB errors will be surfaced when queries are executed.
+>>>>>>> 1826be6 (Updated Phase 1 & 2)
   });
 
 module.exports = pool;

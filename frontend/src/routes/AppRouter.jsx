@@ -5,7 +5,12 @@ import ProtectedRoute from './ProtectedRoute';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import Dashboard from '../pages/student/Dashboard';
+<<<<<<< HEAD
 import { TopicPractice, AdaptiveTest, PerformanceDashboard, Profile } from '../pages/student/StubPages';
+=======
+import Profile from '../pages/student/Profile';
+import { TopicPractice, AdaptiveTest, PerformanceDashboard } from '../pages/student/StubPages';
+>>>>>>> 1826be6 (Updated Phase 1 & 2)
 import AdminDashboard from '../pages/admin/AdminDashboard';
 
 const AppRouter = () => (
