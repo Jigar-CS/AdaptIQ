@@ -8,6 +8,9 @@ import Dashboard from '../pages/student/Dashboard';
 import Profile from '../pages/student/Profile';
 import { TopicPractice, AdaptiveTest, PerformanceDashboard } from '../pages/student/StubPages';
 import AdminDashboard from '../pages/admin/AdminDashboard';
+import TopicManagement from '../pages/admin/TopicManagement';
+import QuestionManagement from '../pages/admin/QuestionManagement';
+import CsvImport from '../pages/admin/CsvImport';
 
 const AppRouter = () => (
   <BrowserRouter>
@@ -25,7 +28,10 @@ const AppRouter = () => (
         <Route path="/profile"     element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         {/* Admin */}
-        <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin"            element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/topics"     element={<ProtectedRoute requiredRole="admin"><TopicManagement /></ProtectedRoute>} />
+        <Route path="/admin/questions"  element={<ProtectedRoute requiredRole="admin"><QuestionManagement /></ProtectedRoute>} />
+        <Route path="/admin/csv-import" element={<ProtectedRoute requiredRole="admin"><CsvImport /></ProtectedRoute>} />
 
         {/* Default */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
