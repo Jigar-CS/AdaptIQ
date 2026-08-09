@@ -1,6 +1,9 @@
+const fs = require('fs');
+const path = require('path');
 const User = require('../models/User');
 const { success, error } = require('../utils/responseFormatter');
 const { hashPassword, comparePassword } = require('../utils/hashUtils');
+const { UPLOAD_DIR } = require('../config/env');
 
 const getProfile = async (req, res, next) => {
   try {
@@ -69,6 +72,14 @@ const uploadProfilePhoto = async (req, res, next) => {
       return error(res, 'NO_PHOTO_UPLOADED', 'No photo file was uploaded', 400);
     }
 
+    const currentUser = await User.findById(req.user.id);
+    if (currentUser?.profile_photo_path) {
+      const oldPath = path.join(__dirname, '..', UPLOAD_DIR, currentUser.profile_photo_path);
+      if (fs.existsSync(oldPath)) {
+        try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to remove old photo:', e); }
+      }
+    }
+
     await User.updatePhotoPath(req.user.id, req.file.filename);
     const user = await User.findById(req.user.id);
     return success(res, { user, photoPath: req.file.filename }, 'Profile photo uploaded successfully');
@@ -81,6 +92,14 @@ const uploadResume = async (req, res, next) => {
   try {
     if (!req.file) {
       return error(res, 'NO_RESUME_UPLOADED', 'No resume file was uploaded', 400);
+    }
+
+    const currentUser = await User.findById(req.user.id);
+    if (currentUser?.resume_path) {
+      const oldPath = path.join(__dirname, '..', UPLOAD_DIR, currentUser.resume_path);
+      if (fs.existsSync(oldPath)) {
+        try { fs.unlinkSync(oldPath); } catch (e) { console.error('Failed to remove old resume:', e); }
+      }
     }
 
     await User.updateResumePath(req.user.id, req.file.filename);

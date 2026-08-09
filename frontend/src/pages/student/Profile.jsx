@@ -35,7 +35,10 @@ const Profile = () => {
 
   const completionCount = useMemo(() => {
     const fields = ['phone', 'college', 'branch', 'graduation_year', 'cgpa', 'profile_photo_path', 'resume_path'];
-    const filled = fields.filter((key) => form[key] || profile?.[key]);
+    const filled = fields.filter((key) => {
+      const val = form[key] ?? profile?.[key];
+      return val !== null && val !== undefined && String(val).trim() !== '';
+    });
     return Math.round((filled.length / fields.length) * 100);
   }, [form, profile]);
 
@@ -97,10 +100,14 @@ const Profile = () => {
 
     setStatus({ loading: true, message: '', error: '' });
     try {
-      const { data } = await profileService.uploadPhoto(file);
-      setProfile(data.user);
-      setPhotoPreview(`/uploads/${data.photoPath}`);
-      setForm((prev) => ({ ...prev, profile_photo_path: data.photoPath }));
+      const result = await profileService.uploadPhoto(file);
+      setProfile(result.user);
+      setPhotoPreview(`/uploads/${result.photoPath}`);
+      setForm((prev) => ({ ...prev, profile_photo_path: result.photoPath }));
+      localStorage.setItem('adaptiq_user', JSON.stringify(result.user));
+      if (setUser) {
+        setUser(result.user);
+      }
       setStatus({ loading: false, message: 'Photo uploaded successfully.', error: '' });
     } catch (err) {
       setStatus({ loading: false, message: '', error: err.response?.data?.error?.message || 'Photo upload failed.' });
@@ -113,10 +120,14 @@ const Profile = () => {
 
     setStatus({ loading: true, message: '', error: '' });
     try {
-      const { data } = await profileService.uploadResume(file);
-      setProfile(data.user);
+      const result = await profileService.uploadResume(file);
+      setProfile(result.user);
       setResumeName(file.name);
-      setForm((prev) => ({ ...prev, resume_path: data.resumePath }));
+      setForm((prev) => ({ ...prev, resume_path: result.resumePath }));
+      localStorage.setItem('adaptiq_user', JSON.stringify(result.user));
+      if (setUser) {
+        setUser(result.user);
+      }
       setStatus({ loading: false, message: 'Resume uploaded successfully.', error: '' });
     } catch (err) {
       setStatus({ loading: false, message: '', error: err.response?.data?.error?.message || 'Resume upload failed.' });
