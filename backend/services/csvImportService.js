@@ -2,46 +2,177 @@ const fs = require('fs');
 const csvParser = require('csv-parser');
 const pool = require('../config/db');
 const Question = require('../models/Question');
+const Topic = require('../models/Topic');
 
 /**
- * Normalizes difficulty input to Easy, Medium, or Hard
+ * Cleans text strings, strips enclosing quotes and common question prefixes (e.g. "Q1: ", "1. ")
+ */
+const cleanText = (str) => {
+  if (str === null || str === undefined) return '';
+  let s = str.toString().trim();
+  // Remove wrapping quotes if any
+  s = s.replace(/^["'](.*)["']$/s, '$1').trim();
+  // Strip leading question prefixes like "1. ", "Q1: ", "Q. ", "1) "
+  s = s.replace(/^(?:q\.?\s*\d*[\:\.\)]?\s*|\d+[\.\)]\s*)/i, '').trim();
+  return s;
+};
+
+/**
+ * Normalizes difficulty input to Easy, Medium, or Hard with Medium fallback
  */
 const normalizeDifficulty = (diffStr) => {
-  if (!diffStr) return null;
+  if (!diffStr) return 'Medium';
   const cleaned = diffStr.toString().trim().toLowerCase();
-  if (cleaned === 'easy' || cleaned === 'e') return 'Easy';
-  if (cleaned === 'medium' || cleaned === 'med' || cleaned === 'm') return 'Medium';
-  if (cleaned === 'hard' || cleaned === 'h') return 'Hard';
-  return null;
+  if (['easy', 'e', '1', 'beginner', 'basic', 'simple'].includes(cleaned)) return 'Easy';
+  if (['medium', 'med', 'm', '2', 'intermediate', 'normal', 'moderate'].includes(cleaned)) return 'Medium';
+  if (['hard', 'h', '3', 'advanced', 'difficult', 'expert', 'complex'].includes(cleaned)) return 'Hard';
+  return 'Medium'; // Default fallback
 };
 
 /**
- * Normalizes correct option input to A, B, C, or D
+ * Smart correct option normalizer: accepts 'A'-'D', '1'-'4', 'Option A'/'Choice 3', or full text matching option A-D
  */
-const normalizeOption = (optStr) => {
-  if (!optStr) return null;
-  const cleaned = optStr.toString().trim().toUpperCase();
-  if (['A', 'B', 'C', 'D'].includes(cleaned)) return cleaned;
+const normalizeOption = (rawCorrect, optA, optB, optC, optD) => {
+  if (!rawCorrect) return null;
+  const raw = rawCorrect.toString().trim();
+  const upper = raw.toUpperCase();
+
+  // 1. Direct letter match (A, B, C, D)
+  if (['A', 'B', 'C', 'D'].includes(upper)) return upper;
+
+  // 2. Numeric index match (1->A, 2->B, 3->C, 4->D)
+  if (upper === '1') return 'A';
+  if (upper === '2') return 'B';
+  if (upper === '3') return 'C';
+  if (upper === '4') return 'D';
+
+  // 3. String patterns like "Option A", "Choice B", "Choice 3", "Ans: C", "Option 2"
+  const match = upper.match(/(?:OPTION|CHOICE|ANS|ANSWER)\s*[:=]?\s*([A-D1-4])/i);
+  if (match) {
+    const val = match[1].toUpperCase();
+    if (['A', 'B', 'C', 'D'].includes(val)) return val;
+    if (val === '1') return 'A';
+    if (val === '2') return 'B';
+    if (val === '3') return 'C';
+    if (val === '4') return 'D';
+  }
+
+  // 4. Match full text against option strings
+  const normVal = raw.toLowerCase().trim();
+  if (optA && normVal === optA.toLowerCase().trim()) return 'A';
+  if (optB && normVal === optB.toLowerCase().trim()) return 'B';
+  if (optC && normVal === optC.toLowerCase().trim()) return 'C';
+  if (optD && normVal === optD.toLowerCase().trim()) return 'D';
+
   return null;
 };
 
+const COLUMN_ALIASES = {
+  question: ['question', 'questiontext', 'question_text', 'qtext', 'q_text', 'questioncontent', 'prompt', 'text', 'problem', 'item', 'query', 'q'],
+  option_a: ['optiona', 'option_a', 'opta', 'opt_a', 'choicea', 'choice_a', 'choice1', 'option1', 'a', 'val_a', 'choice_1'],
+  option_b: ['optionb', 'option_b', 'optb', 'opt_b', 'choiceb', 'choice_b', 'choice2', 'option2', 'b', 'val_b', 'choice_2'],
+  option_c: ['optionc', 'option_c', 'optc', 'opt_c', 'choicec', 'choice_c', 'choice3', 'option3', 'c', 'val_c', 'choice_3'],
+  option_d: ['optiond', 'option_d', 'optd', 'opt_d', 'choiced', 'choice_d', 'choice4', 'option4', 'd', 'val_d', 'choice_4'],
+  correct: ['correctoption', 'correct_option', 'correct', 'answer', 'ans', 'correctans', 'correct_ans', 'rightoption', 'rightans', 'key', 'solution_key'],
+  difficulty: ['difficulty', 'diff', 'level', 'difficultylevel', 'grade', 'complexity'],
+  topic: ['topic', 'topicname', 'topic_name', 'topicid', 'topic_id', 'category', 'subject', 'subtopic', 'sub_topic'],
+  explanation: ['explanation', 'explain', 'solution', 'rationale', 'remark', 'exp', 'notes']
+};
+
+const KEYWORD_MAP = [
+  { keywords: ['percent', 'percentage', 'profit', 'loss', 'discount', 'markup'], name: 'Percentages & Profit/Loss' },
+  { keywords: ['speed', 'distance', 'train', 'boat', 'stream', 'motion', 'travel'], name: 'Time, Speed & Distance' },
+  { keywords: ['work', 'cistern', 'pipe', 'wage', 'efficiency'], name: 'Work & Time' },
+  { keywords: ['number', 'series', 'lcm', 'hcf', 'divisibility', 'remainder', 'sequence'], name: 'Number Systems & Series' },
+  { keywords: ['permutation', 'combination', 'probability', 'dice', 'card', 'arrangement'], name: 'Permutations & Probability' },
+  { keywords: ['syllogism', 'deduction', 'statement', 'conclusion', 'venn', 'logic'], name: 'Logical Deduction & Syllogisms' },
+  { keywords: ['data', 'interpretation', 'chart', 'graph', 'table', 'sufficiency'], name: 'Data Interpretation' },
+  { keywords: ['blood', 'relation', 'family', 'direction', 'compass', 'north', 'south', 'east', 'west'], name: 'Blood Relations & Directions' },
+  { keywords: ['clock', 'calendar', 'leap', 'day', 'angle', 'hour'], name: 'Clocks & Calendars' },
+  { keywords: ['ratio', 'proportion', 'average', 'mixture', 'alligation'], name: 'Averages, Ratios & Mixtures' }
+];
+
 /**
- * Streaming CSV Question Importer
+ * Resolves topic string to existing DB topic ID, or auto-creates new topic dynamically
+ */
+const resolveOrCreateTopic = async (rawTopicStr, topicMapByName, topicIdSet) => {
+  if (!rawTopicStr) return null;
+  const str = rawTopicStr.toString().trim();
+  if (!str) return null;
+
+  // 1. Numeric topic ID
+  if (!isNaN(str) && topicIdSet.has(parseInt(str, 10))) {
+    return parseInt(str, 10);
+  }
+
+  const lowerStr = str.toLowerCase();
+
+  // 2. Exact match in existing DB topics
+  if (topicMapByName.has(lowerStr)) {
+    return topicMapByName.get(lowerStr);
+  }
+
+  // 3. Keyword-based matching to standard Aptitude & Reasoning sub-topics
+  for (const item of KEYWORD_MAP) {
+    if (item.keywords.some((kw) => lowerStr.includes(kw))) {
+      const existingId = topicMapByName.get(item.name.toLowerCase());
+      if (existingId) return existingId;
+    }
+  }
+
+  // 4. Substring / partial match against existing topics
+  for (const [tName, id] of topicMapByName.entries()) {
+    if (tName.includes(lowerStr) || lowerStr.includes(tName.split(' ')[0])) {
+      return id;
+    }
+  }
+
+  // 5. Auto-create new topic dynamically if new Aptitude sub-topic provided
+  const formattedName = str
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+
+  try {
+    const newId = await Topic.create({
+      name: formattedName,
+      description: `Aptitude & Reasoning topic: ${formattedName}`,
+    });
+
+    topicMapByName.set(formattedName.toLowerCase(), newId);
+    topicIdSet.add(newId);
+    return newId;
+  } catch (err) {
+    console.error(`Failed to auto-create topic "${formattedName}":`, err.message);
+    return null;
+  }
+};
+
+/**
+ * Streaming & Auto-Cleaning CSV Question Importer
  */
 const importCsv = async ({ filePath, defaultTopicId }) => {
   const errors = [];
   let totalRows = 0;
   let skippedDuplicates = 0;
+  let cleanedCount = 0;
   let inserted = 0;
 
   // 1. Pre-load active topics map from DB
   const [topicRows] = await pool.execute('SELECT id, name FROM topics WHERE is_active = TRUE');
   const topicMapByName = new Map();
   const topicIdSet = new Set();
+
   for (const t of topicRows) {
-    topicMapByName.set(t.name.trim().toLowerCase(), t.id);
+    const tName = t.name.trim().toLowerCase();
+    topicMapByName.set(tName, t.id);
     topicIdSet.add(t.id);
   }
+
+  // Fallback default topic to first Aptitude sub-topic if available
+  const fallbackTopicId = defaultTopicId
+    ? parseInt(defaultTopicId, 10)
+    : (topicRows.length > 0 ? topicRows[0].id : null);
 
   // 2. Pre-load existing (topic_id, question_hash) pairs into Set
   const [hashRows] = await pool.execute(
@@ -75,78 +206,77 @@ const importCsv = async ({ filePath, defaultTopicId }) => {
     console.error('Failed to unlink CSV temp file:', e);
   }
 
-  // 4. Validate and deduplicate parsed rows
+  // 4. Validate, auto-clean, and deduplicate parsed rows
   for (let i = 0; i < parsedRows.length; i++) {
     const row = parsedRows[i];
     const rowNum = i + 1; // 1-indexed CSV row
     totalRows++;
 
-    // Normalize keys (case-insensitive column lookup)
+    // Normalize keys (fuzzy case & punctuation-insensitive column lookup)
     const rowKeys = Object.keys(row);
-    const getVal = (keyNames) => {
+    const getVal = (aliases) => {
       for (const k of rowKeys) {
-        if (keyNames.includes(k.trim().toLowerCase().replace(/[\s_-]+/g, ''))) {
+        const cleanedKey = k.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (aliases.includes(cleanedKey)) {
           return row[k];
         }
       }
       return null;
     };
 
-    const rawQuestion = getVal(['question', 'questiontext', 'text']);
-    const rawOptA = getVal(['optiona', 'opta', 'a']);
-    const rawOptB = getVal(['optionb', 'optb', 'b']);
-    const rawOptC = getVal(['optionc', 'optc', 'c']);
-    const rawOptD = getVal(['optiond', 'optd', 'd']);
-    const rawCorrect = getVal(['correctoption', 'correct', 'answer', 'correctans']);
-    const rawDiff = getVal(['difficulty', 'diff', 'level']);
-    const rawTopic = getVal(['topic', 'topicname', 'topicid']);
-    const rawExplanation = getVal(['explanation', 'explain']);
+    const rawQuestion = getVal(COLUMN_ALIASES.question);
+    const rawOptA = getVal(COLUMN_ALIASES.option_a);
+    const rawOptB = getVal(COLUMN_ALIASES.option_b);
+    const rawOptC = getVal(COLUMN_ALIASES.option_c);
+    const rawOptD = getVal(COLUMN_ALIASES.option_d);
+    const rawCorrect = getVal(COLUMN_ALIASES.correct);
+    const rawDiff = getVal(COLUMN_ALIASES.difficulty);
+    const rawTopic = getVal(COLUMN_ALIASES.topic);
+    const rawExplanation = getVal(COLUMN_ALIASES.explanation);
+
+    const questionText = cleanText(rawQuestion);
+    const optA = cleanText(rawOptA);
+    const optB = cleanText(rawOptB);
+    const optC = cleanText(rawOptC);
+    const optD = cleanText(rawOptD);
 
     // Check required fields present
-    if (!rawQuestion || !rawQuestion.trim()) {
+    if (!questionText) {
       errors.push({ row: rowNum, reason: 'Missing question text' });
       continue;
     }
-    if (!rawOptA || !rawOptB || !rawOptC || !rawOptD) {
+    if (!optA || !optB || !optC || !optD) {
       errors.push({ row: rowNum, reason: 'All 4 options (A, B, C, D) are required' });
       continue;
     }
 
-    // Determine topic ID
-    let topicId = null;
-    if (rawTopic) {
-      const topicStr = rawTopic.toString().trim();
-      if (!isNaN(topicStr) && topicIdSet.has(parseInt(topicStr, 10))) {
-        topicId = parseInt(topicStr, 10);
-      } else {
-        const foundId = topicMapByName.get(topicStr.toLowerCase());
-        if (foundId) topicId = foundId;
-      }
-    }
-    if (!topicId && defaultTopicId) {
-      topicId = parseInt(defaultTopicId, 10);
+    // Determine & resolve target sub-topic ID per row
+    let topicId = await resolveOrCreateTopic(rawTopic, topicMapByName, topicIdSet);
+
+    if (!topicId) {
+      topicId = fallbackTopicId;
     }
     if (!topicId || !topicIdSet.has(topicId)) {
-      errors.push({ row: rowNum, reason: `Invalid or missing topic: "${rawTopic || defaultTopicId || 'None'}"` });
+      errors.push({ row: rowNum, reason: `Invalid or missing topic mapping for: "${rawTopic || 'None'}"` });
       continue;
     }
 
-    // Validate correct option
-    const correctOption = normalizeOption(rawCorrect);
+    // Validate & smart-clean correct option
+    const correctOption = normalizeOption(rawCorrect, optA, optB, optC, optD);
     if (!correctOption) {
-      errors.push({ row: rowNum, reason: `Invalid correct option "${rawCorrect}". Must be A, B, C, or D` });
+      errors.push({ row: rowNum, reason: `Invalid correct option "${rawCorrect}". Could not match A/B/C/D or option text.` });
       continue;
     }
 
-    // Validate difficulty
+    // Validate & smart-clean difficulty
     const difficulty = normalizeDifficulty(rawDiff);
-    if (!difficulty) {
-      errors.push({ row: rowNum, reason: `Invalid difficulty "${rawDiff}". Must be Easy, Medium, or Hard` });
-      continue;
+
+    // Check if auto-cleaning occurred
+    if (rawQuestion !== questionText || !['A', 'B', 'C', 'D'].includes((rawCorrect || '').toString().trim().toUpperCase()) || !rawDiff) {
+      cleanedCount++;
     }
 
     // Calculate hash and check duplicate
-    const questionText = rawQuestion.trim();
     const hash = Question.generateQuestionHash(questionText);
     const dedupeKey = `${topicId}_${hash}`;
 
@@ -161,13 +291,13 @@ const importCsv = async ({ filePath, defaultTopicId }) => {
     validBatch.push([
       topicId,
       questionText,
-      rawOptA.trim(),
-      rawOptB.trim(),
-      rawOptC.trim(),
-      rawOptD.trim(),
+      optA,
+      optB,
+      optC,
+      optD,
       correctOption,
       difficulty,
-      rawExplanation ? rawExplanation.trim() : null,
+      rawExplanation ? cleanText(rawExplanation) : null,
       hash,
     ]);
   }
@@ -194,7 +324,6 @@ const importCsv = async ({ filePath, defaultTopicId }) => {
       } catch (err) {
         await conn.rollback();
         console.error('Batch insert chunk error:', err);
-        // Log individual chunk failure
         chunk.forEach((row, idx) => {
           errors.push({ row: i + idx + 1, reason: `Database insert failure: ${err.message}` });
         });
@@ -207,6 +336,7 @@ const importCsv = async ({ filePath, defaultTopicId }) => {
   return {
     total_rows: totalRows,
     inserted,
+    cleaned_count: cleanedCount,
     skipped_duplicates: skippedDuplicates,
     errors,
   };

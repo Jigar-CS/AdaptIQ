@@ -28,6 +28,16 @@ const CsvImport = () => {
       try {
         const topicList = await adminService.getTopics();
         setTopics(topicList);
+
+        // Pre-select Aptitude & Reasoning topic by default if found
+        const aptitudeTopic = topicList.find(
+          (t) => t.name.toLowerCase().includes('aptitude') || t.name.toLowerCase().includes('reasoning')
+        );
+        if (aptitudeTopic) {
+          setSelectedTopic(aptitudeTopic.id.toString());
+        } else if (topicList.length > 0) {
+          setSelectedTopic(topicList[0].id.toString());
+        }
       } catch {
         // ignore
       }
@@ -67,7 +77,7 @@ const CsvImport = () => {
     try {
       const resReport = await adminService.importCsv(file, selectedTopic);
       setReport(resReport);
-      setStatus({ message: 'CSV import processed successfully!', error: '' });
+      setStatus({ message: 'CSV dataset auto-cleaned & imported successfully!', error: '' });
     } catch (err) {
       setStatus({
         message: '',
@@ -79,16 +89,16 @@ const CsvImport = () => {
   };
 
   const handleDownloadSample = () => {
-    const sampleCsv = `question_text,option_a,option_b,option_c,option_d,correct_option,difficulty,topic,explanation
-"What is the capital of France?","London","Paris","Berlin","Madrid","B","Easy","General Knowledge","Paris is the capital of France."
-"If 2x + 5 = 15, what is x?","3","5","7","10","B","Medium","Quantitative Aptitude","2x = 10, so x = 5."
-"Which number comes next in sequence 2, 4, 8, 16?","24","30","32","64","C","Easy","Logical Reasoning","Each number doubles."`;
+    const sampleCsv = `q_text,choice_1,choice_2,choice_3,choice_4,ans,level,explanation
+"If a train travels 60 km in 1 hour, how far in 3 hours?","120 km","150 km","180 km","200 km","180 km","Easy","Distance = 60 * 3 = 180 km."
+"What is 15% of 200?","25","30","35","40","B","beginner","15/100 * 200 = 30."
+"Find next number: 2, 4, 8, 16, ?","24","28","32","36","Choice 3","Medium","Each term doubles."`;
 
     const blob = new Blob([sampleCsv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'sample_questions_import.csv');
+    link.setAttribute('download', 'sample_aptitude_dataset.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -120,11 +130,11 @@ const CsvImport = () => {
       <main className={styles.main}>
         <header className={styles.header} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className={styles.title}>CSV Batch Import</h1>
-            <p className="text-muted text-sm">Upload large question banks in bulk using streaming validation</p>
+            <h1 className={styles.title}>CSV Dataset Cleaner & Importer</h1>
+            <p className="text-muted text-sm">Upload raw CSV files — automatically cleans, formats, & imports questions into Aptitude & Reasoning</p>
           </div>
           <button className="btn btn-outline" onClick={handleDownloadSample}>
-            📥 Download Sample CSV
+            📥 Download Sample Dataset CSV
           </button>
         </header>
 
@@ -137,13 +147,12 @@ const CsvImport = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
             <div className="form-group">
-              <label className="form-label">Default Topic (Fallback if not in CSV)</label>
+              <label className="form-label">Target Topic (Default: Aptitude & Reasoning)</label>
               <select
                 className="form-input"
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
               >
-                <option value="">Auto-detect / None</option>
                 {topics.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
@@ -162,13 +171,13 @@ const CsvImport = () => {
           </div>
 
           <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', marginBottom: 20 }}>
-            <strong style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>CSV Format Instructions:</strong>
+            <strong style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>✨ Automatic Dataset Cleaning Capabilities:</strong>
             <ul style={{ fontSize: 13, color: 'var(--color-text-muted)', paddingLeft: 20, margin: 0 }}>
-              <li>Required columns: <code>question_text</code>, <code>option_a</code>, <code>option_b</code>, <code>option_c</code>, <code>option_d</code>, <code>correct_option</code>, <code>difficulty</code>.</li>
-              <li>Optional columns: <code>topic</code> (or <code>topic_id</code>), <code>explanation</code>.</li>
-              <li><code>correct_option</code> must be one of: <code>A</code>, <code>B</code>, <code>C</code>, <code>D</code>.</li>
-              <li><code>difficulty</code> must be one of: <code>Easy</code>, <code>Medium</code>, <code>Hard</code>.</li>
-              <li>Duplicate questions per topic (SHA-256 matched) are automatically skipped.</li>
+              <li><strong>Fuzzy Column Detection:</strong> Accepts non-standard headers like <code>q_text</code>, <code>choice1-4</code>, <code>ans</code>, <code>level</code>, <code>solution</code>, etc.</li>
+              <li><strong>Smart Answer Matching:</strong> Converts full text answers (e.g. <em>"180 km"</em>) or numbers (<code>1-4</code>) directly to option keys (<code>A/B/C/D</code>).</li>
+              <li><strong>Difficulty Normalization:</strong> Maps variations (e.g. <code>beginner</code> &rarr; <code>Easy</code>, <code>advanced</code> &rarr; <code>Hard</code>) and defaults missing levels to <code>Medium</code>.</li>
+              <li><strong>Text Sanitization:</strong> Automatically strips question prefixes (<code>Q1: </code>, <code>1. </code>), unescapes quotes, and trims whitespace.</li>
+              <li><strong>Deduplication:</strong> Prevents duplicate questions using SHA-256 text hashing.</li>
             </ul>
           </div>
 
@@ -177,14 +186,14 @@ const CsvImport = () => {
             className="btn btn-primary"
             disabled={uploading || !file}
           >
-            {uploading ? 'Processing CSV Stream…' : 'Start Batch Import'}
+            {uploading ? 'Auto-cleaning & Importing Dataset…' : 'Start Auto-Clean & Import'}
           </button>
         </form>
 
         {/* Import Results Report Dashboard */}
         {report && (
           <div className="card">
-            <h2 style={{ fontSize: 18, marginBottom: 16 }}>Import Execution Report</h2>
+            <h2 style={{ fontSize: 18, marginBottom: 16 }}>Import Execution & Auto-Clean Report</h2>
 
             <div className={styles.statsGrid}>
               <div className={styles.statCard}>
@@ -194,6 +203,10 @@ const CsvImport = () => {
               <div className={styles.statCard}>
                 <div className={styles.statValue} style={{ color: 'var(--color-success)' }}>{report.inserted}</div>
                 <div className={styles.statLabel}>Successfully Inserted</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statValue} style={{ color: 'var(--color-primary)' }}>{report.cleaned_count || 0}</div>
+                <div className={styles.statLabel}>Auto-Cleaned Rows</div>
               </div>
               <div className={styles.statCard}>
                 <div className={styles.statValue} style={{ color: 'var(--color-warning)' }}>{report.skipped_duplicates}</div>
