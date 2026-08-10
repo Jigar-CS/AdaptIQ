@@ -8,6 +8,8 @@
 
 - [Overview](#-overview)
 - [Key Features](#-key-features)
+- [User Stories](#-user-stories)
+- [Use Cases](#-use-cases)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Database Schema](#-database-schema)
@@ -42,6 +44,391 @@ AdaptIQ is a full-stack web application that helps engineering students prepare 
 | 🔐 **Role-Based Access** | Separate Student and Admin roles with JWT-protected routes |
 | 🛡️ **Security First** | Parameterized queries, bcrypt, helmet.js, rate limiting on auth endpoints |
 | 👤 **Profile Completion Gate** | After 3 topic-wise tests, students must upload photo & resume and fill placement details before continuing |
+
+---
+
+## 🧾 User Stories
+
+| ID | Actor | User Story |
+|---|---|---|
+| US-01 | Student | As a student, I want to register on AdaptIQ so that I can create my personal learning account. |
+| US-02 | Student | As a student, I want to securely log in so that I can access my personalized dashboard and assessments. |
+| US-03 | Student | As a student, I want to select a specific aptitude topic so that I can practice that topic individually. |
+| US-04 | Student | As a student, I want to attempt an adaptive test so that the difficulty of subsequent questions can respond to my performance. |
+| US-05 | Student | As a student, I want the first batch of questions to assess my initial ability so that the system can understand my current performance level. |
+| US-06 | Student | As a student, I want the next batch of questions to be selected according to my performance so that I can receive more relevant practice. |
+| US-07 | Student | As a student, I want the system to avoid repeating questions that I have already attempted in the current assessment so that my test remains meaningful. |
+| US-08 | Student | As a student, I want to see my topic-wise performance so that I can identify the areas in which I am strong or weak. |
+| US-09 | Student | As a student, I want to see my difficulty-wise performance so that I can understand how I perform on Easy, Medium, and Hard questions. |
+| US-10 | Student | As a student, I want to view my previous test attempts so that I can track my preparation progress over time. |
+| US-11 | Student | As a student, I want to receive AI-generated feedback so that I can understand my strengths, weaknesses, and areas requiring improvement. |
+| US-12 | Student | As a student, I want personalized recommendations so that I know which topics I should revise or practice next. |
+| US-13 | Student | As a student, I want to view my placement readiness so that I can understand my current level of preparation. |
+| US-14 | Student | As a student, I want to attempt miscellaneous aptitude tests so that I can evaluate my preparation across multiple topics. |
+| US-15 | Student | As a student, I want to attempt company-oriented mock tests so that I can practice for specific placement recruitment patterns. |
+| US-16 | Student | As a student, I want to view my learning trends so that I can understand whether my performance is improving over time. |
+| US-17 | Student | As a student, I want to manage my profile so that my personal information remains updated. |
+| US-18 | Administrator | As an administrator, I want to securely log in so that only authorized users can access administrative functions. |
+| US-19 | Administrator | As an administrator, I want to manage student accounts so that I can maintain the platform's user database. |
+| US-20 | Administrator | As an administrator, I want to add aptitude topics so that the platform can support different areas of preparation. |
+| US-21 | Administrator | As an administrator, I want to add, edit, and delete questions so that I can maintain the question bank. |
+| US-22 | Administrator | As an administrator, I want to assign a topic and difficulty level to each question so that the adaptive engine can select appropriate questions. |
+| US-23 | Administrator | As an administrator, I want to import questions using CSV files so that I can add a large number of questions efficiently. |
+| US-24 | Administrator | As an administrator, I want to manage company-oriented mock tests so that students can practice company-specific assessments. |
+| US-25 | Administrator | As an administrator, I want to view platform and student performance analytics so that I can monitor the effectiveness of the platform. |
+| US-26 | Administrator | As an administrator, I want to manage the question bank efficiently so that sufficient questions are available for adaptive assessment. |
+
+---
+
+## 🧩 Use Cases
+
+### Actors
+
+- Student
+- Administrator
+- Adaptive Decision Engine (ADE)
+- Question Selection Engine (QSE)
+- AI Learning Agent (AILA)
+
+### UC-01: Student Registration
+
+**Actor:**  
+Student
+
+**Description:**  
+Allows a new student to create an AdaptIQ account.
+
+**Preconditions:**
+- Student does not already have an account.
+
+**Main Flow:**
+1. Student opens the registration page.
+2. Student enters the required information.
+3. System validates the information.
+4. System securely stores the credentials.
+5. System creates the account.
+6. Student can log in.
+
+**Postconditions:**
+- Student account is created.
+
+### UC-02: Student Login
+
+**Actor:**  
+Student
+
+**Description:**  
+Allows a registered student to securely access AdaptIQ.
+
+**Main Flow:**
+1. Student enters credentials.
+2. System validates credentials.
+3. System authenticates the student.
+4. System generates an authentication token.
+5. Student is redirected to the dashboard.
+
+**Postconditions:**
+- Student is authenticated.
+
+### UC-03: Start Topic-wise Adaptive Test
+
+**Actor:**  
+Student
+
+**Description:**  
+Allows a student to begin an adaptive assessment for a selected aptitude topic.
+
+**Main Flow:**
+1. Student selects a topic.
+2. System checks question availability.
+3. System initializes the assessment.
+4. System loads Batch 1 containing five diagnostic questions.
+5. Student attempts the questions.
+6. System records responses.
+
+**Postconditions:**
+- First batch is completed and performance data is available.
+
+### UC-04: Evaluate Student Batch Performance
+
+**Actor:**  
+Adaptive Decision Engine
+
+**Description:**  
+Analyzes student performance after a batch of five questions.
+
+**Main Flow:**
+1. Student submits the batch.
+2. System records responses.
+3. System identifies the difficulty of each question.
+4. System calculates difficulty-wise performance.
+5. System updates performance history.
+6. Performance data is passed to the ADE.
+
+**Postconditions:**
+- Updated performance is available for adaptive decision-making.
+
+### UC-05: Determine Next Question Difficulty
+
+**Actor:**  
+Adaptive Decision Engine
+
+**Description:**  
+Determines the difficulty distribution for the next batch.
+
+**Main Flow:**
+1. ADE receives performance data.
+2. ADE compares Easy, Medium, and Hard performance.
+3. ADE ranks difficulty levels according to observed performance.
+4. ADE identifies relatively weaker and stronger difficulty levels.
+5. ADE generates the next difficulty distribution.
+6. ADE sends the distribution to the QSE.
+
+**Postconditions:**
+- Difficulty distribution for the next batch is determined.
+
+### UC-06: Select Next Questions
+
+**Actor:**  
+Question Selection Engine
+
+**Description:**  
+Retrieves actual questions that satisfy the difficulty distribution.
+
+**Main Flow:**
+1. QSE receives topic and difficulty distribution.
+2. QSE checks the question bank.
+3. QSE excludes previously attempted question IDs.
+4. QSE retrieves eligible questions.
+5. QSE selects the required number of questions.
+6. QSE returns the questions.
+
+**Postconditions:**
+- Next batch of five questions is generated.
+
+### UC-07: Complete Adaptive Assessment
+
+**Actors:**  
+Student, ADE, QSE
+
+**Description:**  
+Manages the complete 20-question adaptive assessment.
+
+**Main Flow:**
+1. Student starts the test.
+2. System loads Batch 1.
+3. Student answers five questions.
+4. System evaluates performance.
+5. ADE determines the next difficulty distribution.
+6. QSE retrieves Batch 2.
+7. Student answers Batch 2.
+8. System updates performance.
+9. ADE determines the next difficulty distribution.
+10. QSE retrieves Batch 3.
+11. Student answers Batch 3.
+12. System updates performance.
+13. ADE determines the next difficulty distribution.
+14. QSE retrieves Batch 4.
+15. Student completes the final five questions.
+16. System generates final performance results.
+
+**Postconditions:**
+- A 20-question adaptive assessment is completed.
+
+### UC-08: Generate AI Learning Feedback
+
+**Actor:**  
+AI Learning Agent
+
+**Description:**  
+Provides personalized learning guidance based on student performance.
+
+**Main Flow:**
+1. Student completes the assessment.
+2. System collects performance information.
+3. Information is provided to AILA.
+4. AILA analyzes strengths and weaknesses.
+5. AILA generates feedback.
+6. AILA recommends revision areas.
+7. Recommendations are shown to the student.
+
+**Postconditions:**
+- Personalized feedback is available.
+
+### UC-09: View Performance Analytics
+
+**Actor:**  
+Student
+
+**Description:**  
+Allows students to analyze preparation progress.
+
+**Main Flow:**
+1. Student opens the analytics dashboard.
+2. System retrieves performance history.
+3. System displays topic-wise performance.
+4. System displays difficulty-wise performance.
+5. System displays learning trends.
+6. Student reviews performance.
+
+**Postconditions:**
+- Student can understand current learning progress.
+
+### UC-10: View Placement Readiness
+
+**Actor:**  
+Student
+
+**Description:**  
+Provides an overview of the student's placement preparation.
+
+**Main Flow:**
+1. Student opens Placement Readiness.
+2. System retrieves relevant performance data.
+3. System analyzes topic and assessment performance.
+4. System displays placement preparation status.
+5. System highlights improvement areas.
+
+**Postconditions:**
+- Student receives placement readiness information.
+
+### UC-11: Attempt Miscellaneous Test
+
+**Actor:**  
+Student
+
+**Description:**  
+Allows students to evaluate aptitude preparation across multiple topics.
+
+**Main Flow:**
+1. Student selects a Miscellaneous Test.
+2. System selects questions from configured topics.
+3. Student attempts the test.
+4. System evaluates responses.
+5. Results are stored.
+6. Analytics are updated.
+
+**Postconditions:**
+- Overall aptitude performance is available.
+
+### UC-12: Attempt Company Mock Test
+
+**Actor:**  
+Student
+
+**Description:**  
+Allows students to practice company-oriented placement assessments.
+
+**Main Flow:**
+1. Student selects a company mock test.
+2. System loads the configured assessment.
+3. Student attempts the test.
+4. System evaluates responses.
+5. Result is stored.
+6. Performance is displayed.
+
+**Postconditions:**
+- Company-oriented mock test result is available.
+
+### UC-13: Manage Questions
+
+**Actor:**  
+Administrator
+
+**Description:**  
+Allows the administrator to maintain the question bank.
+
+**Main Flow:**
+1. Administrator opens question management.
+2. Administrator adds, edits, or deletes questions.
+3. Administrator specifies the topic and difficulty.
+4. System validates the information.
+5. System updates the question bank.
+
+**Postconditions:**
+- Question bank is updated.
+
+### UC-14: Import Questions Using CSV
+
+**Actor:**  
+Administrator
+
+**Description:**  
+Allows the administrator to bulk import questions.
+
+**Main Flow:**
+1. Administrator selects a CSV file.
+2. System validates the file.
+3. System validates the question fields.
+4. System validates the topic and difficulty.
+5. Valid questions are inserted into MySQL.
+6. Invalid records are reported.
+
+**Postconditions:**
+- Valid questions are added to the question bank.
+
+### UC-15: Manage Users
+
+**Actor:**  
+Administrator
+
+**Description:**  
+Allows the administrator to manage registered users.
+
+**Main Flow:**
+1. Administrator opens user management.
+2. System displays users.
+3. Administrator views or manages user information.
+4. System applies authorized changes.
+
+**Postconditions:**
+- User information is maintained.
+
+### UC-16: Manage Company Tests
+
+**Actor:**  
+Administrator
+
+**Description:**  
+Allows the administrator to create and maintain company-oriented mock tests.
+
+**Main Flow:**
+1. Administrator opens company test management.
+2. Administrator creates or edits a company test.
+3. Administrator configures test parameters and questions.
+4. System validates the configuration.
+5. System saves the test.
+
+**Postconditions:**
+- Company mock test is available according to its configuration.
+
+### Adaptive Workflow Summary
+
+Student
+  ↓
+Start Adaptive Test
+  ↓
+Batch of 5 Questions
+  ↓
+Submit Answers
+  ↓
+Calculate Difficulty-wise Performance
+  ↓
+Adaptive Decision Engine
+  ↓
+Difficulty Distribution
+  ↓
+Question Selection Engine
+  ↓
+Next 5 Questions
+  ↓
+Repeat Until 20 Questions
+  ↓
+Performance Analytics
+  ↓
+AI Learning Agent
+  ↓
+Personalized Feedback & Recommendations
 
 ---
 
