@@ -5,10 +5,10 @@ import adminService from '../../services/adminService';
 import styles from './AdminDashboard.module.css';
 
 const ADMIN_NAV = [
-  { to: '/admin',           label: '📊 Overview' },
-  { to: '/admin/topics',    label: '📚 Topics' },
+  { to: '/admin', label: '📊 Overview' },
+  { to: '/admin/topics', label: '📚 Topics' },
   { to: '/admin/questions', label: '❓ Questions' },
-  { to: '/admin/csv-import',label: '📥 CSV Import' },
+  { to: '/admin/csv-import', label: '📥 CSV Import' },
 ];
 
 const CsvImport = () => {
@@ -17,7 +17,7 @@ const CsvImport = () => {
   const location = useLocation();
 
   const [topics, setTopics] = useState([]);
-  const [selectedTopic, setSelectedTopic] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState('auto');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [report, setReport] = useState(null);
@@ -28,16 +28,6 @@ const CsvImport = () => {
       try {
         const topicList = await adminService.getTopics();
         setTopics(topicList);
-
-        // Pre-select Aptitude & Reasoning topic by default if found
-        const aptitudeTopic = topicList.find(
-          (t) => t.name.toLowerCase().includes('aptitude') || t.name.toLowerCase().includes('reasoning')
-        );
-        if (aptitudeTopic) {
-          setSelectedTopic(aptitudeTopic.id.toString());
-        } else if (topicList.length > 0) {
-          setSelectedTopic(topicList[0].id.toString());
-        }
       } catch {
         // ignore
       }
@@ -89,16 +79,17 @@ const CsvImport = () => {
   };
 
   const handleDownloadSample = () => {
-    const sampleCsv = `q_text,choice_1,choice_2,choice_3,choice_4,ans,level,explanation
-"If a train travels 60 km in 1 hour, how far in 3 hours?","120 km","150 km","180 km","200 km","180 km","Easy","Distance = 60 * 3 = 180 km."
-"What is 15% of 200?","25","30","35","40","B","beginner","15/100 * 200 = 30."
-"Find next number: 2, 4, 8, 16, ?","24","28","32","36","Choice 3","Medium","Each term doubles."`;
+    const sampleCsv = `q_text,choice_1,choice_2,choice_3,choice_4,ans,level,topic,explanation
+"If a train travels 60 km in 1 hour, how far in 3 hours?","120 km","150 km","180 km","200 km","180 km","Easy","Time, Speed & Distance","Distance = 60 * 3 = 180 km."
+"What is 15% of 200?","25","30","35","40","B","beginner","Percentages & Profit/Loss","15/100 * 200 = 30."
+"All cats are animals. All animals have four legs. Are cats animals?","Yes","No","Cannot be determined","None","Choice 1","Medium","Logical Deduction & Syllogisms","Direct deduction from premise 1."
+"Find next number in series: 2, 4, 8, 16, ?","24","28","32","36","Choice 3","Medium","Number Systems & Series","Each term doubles."`;
 
     const blob = new Blob([sampleCsv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'sample_aptitude_dataset.csv');
+    link.setAttribute('download', 'sample_multi_topic_dataset.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -131,7 +122,7 @@ const CsvImport = () => {
         <header className={styles.header} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 className={styles.title}>CSV Dataset Cleaner & Importer</h1>
-            <p className="text-muted text-sm">Upload raw CSV files — automatically cleans, formats, & imports questions into Aptitude & Reasoning</p>
+            <p className="text-muted text-sm">Upload raw CSV files — automatically cleans, categorizes topics, & imports questions into Aptitude & Reasoning</p>
           </div>
           <button className="btn btn-outline" onClick={handleDownloadSample}>
             📥 Download Sample Dataset CSV
@@ -147,12 +138,13 @@ const CsvImport = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
             <div className="form-group">
-              <label className="form-label">Target Topic (Default: Aptitude & Reasoning)</label>
+             <label className="form-label">Target Topic (Default: Auto Detect Topic)</label>
               <select
                 className="form-input"
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
               >
+                <option value="auto">Auto Detect Topic</option>
                 {topics.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
@@ -171,13 +163,13 @@ const CsvImport = () => {
           </div>
 
           <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', marginBottom: 20 }}>
-            <strong style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>✨ Automatic Dataset Cleaning Capabilities:</strong>
+            <strong style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>✨ Automatic Dataset Cleaning & Categorization Capabilities:</strong>
             <ul style={{ fontSize: 13, color: 'var(--color-text-muted)', paddingLeft: 20, margin: 0 }}>
-              <li><strong>Fuzzy Column Detection:</strong> Accepts non-standard headers like <code>q_text</code>, <code>choice1-4</code>, <code>ans</code>, <code>level</code>, <code>solution</code>, etc.</li>
+              <li><strong>Smart Multi-Topic Auto-Detection:</strong> Auto-categorizes questions using row <code>topic</code> column OR intelligent question-text keyword analysis across multiple topics.</li>
+              <li><strong>Fuzzy Column Detection:</strong> Accepts non-standard headers like <code>q_text</code>, <code>choice1-4</code>, <code>ans</code>, <code>level</code>, <code>topic</code>, <code>solution</code>, etc.</li>
               <li><strong>Smart Answer Matching:</strong> Converts full text answers (e.g. <em>"180 km"</em>) or numbers (<code>1-4</code>) directly to option keys (<code>A/B/C/D</code>).</li>
               <li><strong>Difficulty Normalization:</strong> Maps variations (e.g. <code>beginner</code> &rarr; <code>Easy</code>, <code>advanced</code> &rarr; <code>Hard</code>) and defaults missing levels to <code>Medium</code>.</li>
-              <li><strong>Text Sanitization:</strong> Automatically strips question prefixes (<code>Q1: </code>, <code>1. </code>), unescapes quotes, and trims whitespace.</li>
-              <li><strong>Deduplication:</strong> Prevents duplicate questions using SHA-256 text hashing.</li>
+              <li><strong>Text Sanitization & Deduplication:</strong> Strips prefixes, unescapes quotes, and prevents duplicates using SHA-256 hashes.</li>
             </ul>
           </div>
 
@@ -219,6 +211,32 @@ const CsvImport = () => {
                 <div className={styles.statLabel}>Rejected Rows</div>
               </div>
             </div>
+
+            {/* Topic Breakdown Card */}
+            {report.topic_breakdown && Object.keys(report.topic_breakdown).length > 0 && (
+              <div style={{ marginTop: 24, padding: 16, background: 'rgba(108,99,255,0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(108,99,255,0.2)' }}>
+                <h3 style={{ fontSize: 14, marginBottom: 12, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>📂</span> Auto-Categorized Questions by Topic
+                </h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                  {Object.entries(report.topic_breakdown).map(([tName, count]) => (
+                    <div
+                      key={tName}
+                      style={{
+                        background: 'var(--color-bg-card)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '8px 14px',
+                        fontSize: '13px',
+                      }}
+                    >
+                      <span style={{ color: 'var(--color-text-muted)' }}>{tName}:</span>{' '}
+                      <strong style={{ color: 'var(--color-accent)' }}>{count} question{count > 1 ? 's' : ''}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {report.errors && report.errors.length > 0 && (
               <div style={{ marginTop: 24 }}>

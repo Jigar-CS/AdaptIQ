@@ -93,59 +93,87 @@ const KEYWORD_MAP = [
 ];
 
 /**
- * Resolves topic string to existing DB topic ID, or auto-creates new topic dynamically
+ * Resolves topic string to existing DB topic ID, or auto-detects from question text keywords, or auto-creates new topic dynamically
  */
-const resolveOrCreateTopic = async (rawTopicStr, topicMapByName, topicIdSet) => {
-  if (!rawTopicStr) return null;
-  const str = rawTopicStr.toString().trim();
-  if (!str) return null;
+const resolveOrCreateTopic = async (rawTopicStr, questionText, topicMapByName, topicIdSet, topicIdToNameMap) => {
+  const str = rawTopicStr ? rawTopicStr.toString().trim() : '';
 
-  // 1. Numeric topic ID
-  if (!isNaN(str) && topicIdSet.has(parseInt(str, 10))) {
-    return parseInt(str, 10);
-  }
+  if (str) {
+    // 1. Numeric topic ID
+    if (!isNaN(str) && topicIdSet.has(parseInt(str, 10))) {
+      return parseInt(str, 10);
+    }
 
-  const lowerStr = str.toLowerCase();
+    const lowerStr = str.toLowerCase();
 
-  // 2. Exact match in existing DB topics
-  if (topicMapByName.has(lowerStr)) {
-    return topicMapByName.get(lowerStr);
-  }
+    // 2. Exact match in existing DB topics
+    if (topicMapByName.has(lowerStr)) {
+      return topicMapByName.get(lowerStr);
+    }
 
-  // 3. Keyword-based matching to standard Aptitude & Reasoning sub-topics
-  for (const item of KEYWORD_MAP) {
-    if (item.keywords.some((kw) => lowerStr.includes(kw))) {
-      const existingId = topicMapByName.get(item.name.toLowerCase());
-      if (existingId) return existingId;
+    // 3. Keyword-based matching to standard Aptitude & Reasoning sub-topics
+    for (const item of KEYWORD_MAP) {
+      if (item.keywords.some((kw) => lowerStr.includes(kw))) {
+        const existingId = topicMapByName.get(item.name.toLowerCase());
+        if (existingId) return existingId;
+      }
+    }
+
+    // 4. Substring / partial match against existing topics
+    for (const [tName, id] of topicMapByName.entries()) {
+      if (tName.includes(lowerStr) || lowerStr.includes(tName.split(' ')[0])) {
+        return id;
+      }
     }
   }
 
-  // 4. Substring / partial match against existing topics
-  for (const [tName, id] of topicMapByName.entries()) {
-    if (tName.includes(lowerStr) || lowerStr.includes(tName.split(' ')[0])) {
-      return id;
+  // 5. Smart auto-detect from question text keywords if no topic column or unresolved topic string
+  if (questionText) {
+    const qLower = questionText.toLowerCase();
+
+    // Match against KEYWORD_MAP first
+    for (const item of KEYWORD_MAP) {
+      if (item.keywords.some((kw) => qLower.includes(kw))) {
+        const existingId = topicMapByName.get(item.name.toLowerCase());
+        if (existingId) return existingId;
+      }
+    }
+
+    // Match against DB topic names (significant words)
+    for (const [tName, id] of topicMapByName.entries()) {
+      const keywords = tName.split(/[\s,&]+/).filter((w) => w.length > 3);
+      if (keywords.some((kw) => qLower.includes(kw))) {
+        return id;
+      }
     }
   }
 
-  // 5. Auto-create new topic dynamically if new Aptitude sub-topic provided
-  const formattedName = str
-    .split(/\s+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
+  // 6. Auto-create new topic dynamically if new Aptitude sub-topic provided in str
+  if (str) {
+    const formattedName = str
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
 
-  try {
-    const newId = await Topic.create({
-      name: formattedName,
-      description: `Aptitude & Reasoning topic: ${formattedName}`,
-    });
+    try {
+      const newId = await Topic.create({
+        name: formattedName,
+        description: `Aptitude & Reasoning topic: ${formattedName}`,
+      });
 
-    topicMapByName.set(formattedName.toLowerCase(), newId);
-    topicIdSet.add(newId);
-    return newId;
-  } catch (err) {
-    console.error(`Failed to auto-create topic "${formattedName}":`, err.message);
-    return null;
+      topicMapByName.set(formattedName.toLowerCase(), newId);
+      topicIdSet.add(newId);
+      if (topicIdToNameMap) {
+        topicIdToNameMap.set(newId, formattedName);
+      }
+      return newId;
+    } catch (err) {
+      console.error(`Failed to auto-create topic "${formattedName}":`, err.message);
+      return null;
+    }
   }
+
+  return null;
 };
 
 /**
@@ -162,16 +190,21 @@ const importCsv = async ({ filePath, defaultTopicId }) => {
   const [topicRows] = await pool.execute('SELECT id, name FROM topics WHERE is_active = TRUE');
   const topicMapByName = new Map();
   const topicIdSet = new Set();
+  const topicIdToNameMap = new Map();
 
   for (const t of topicRows) {
     const tName = t.name.trim().toLowerCase();
     topicMapByName.set(tName, t.id);
     topicIdSet.add(t.id);
+    topicIdToNameMap.set(t.id, t.name);
   }
 
-  // Fallback default topic to first Aptitude sub-topic if available
-  const fallbackTopicId = defaultTopicId
+  // Fallback default topic: if defaultTopicId is valid ID use it, else default to first DB topic
+  const parsedDefaultTopicId = (defaultTopicId && defaultTopicId !== 'auto' && !isNaN(defaultTopicId))
     ? parseInt(defaultTopicId, 10)
+    : null;
+  const fallbackTopicId = (parsedDefaultTopicId && topicIdSet.has(parsedDefaultTopicId))
+    ? parsedDefaultTopicId
     : (topicRows.length > 0 ? topicRows[0].id : null);
 
   // 2. Pre-load existing (topic_id, question_hash) pairs into Set
@@ -185,6 +218,7 @@ const importCsv = async ({ filePath, defaultTopicId }) => {
 
   const validBatch = [];
   const parsedRows = [];
+  const topicBreakdown = {};
 
   // 3. Parse CSV line-by-line via stream
   await new Promise((resolve, reject) => {
@@ -250,8 +284,8 @@ const importCsv = async ({ filePath, defaultTopicId }) => {
       continue;
     }
 
-    // Determine & resolve target sub-topic ID per row
-    let topicId = await resolveOrCreateTopic(rawTopic, topicMapByName, topicIdSet);
+    // Determine & resolve target sub-topic ID per row (auto-detect from rawTopic or questionText)
+    let topicId = await resolveOrCreateTopic(rawTopic, questionText, topicMapByName, topicIdSet, topicIdToNameMap);
 
     if (!topicId) {
       topicId = fallbackTopicId;
@@ -300,6 +334,9 @@ const importCsv = async ({ filePath, defaultTopicId }) => {
       rawExplanation ? cleanText(rawExplanation) : null,
       hash,
     ]);
+
+    const topicName = topicIdToNameMap.get(topicId) || 'General Aptitude';
+    topicBreakdown[topicName] = (topicBreakdown[topicName] || 0) + 1;
   }
 
   // 5. Transaction-backed chunked inserts (~100 rows/chunk)
@@ -339,6 +376,7 @@ const importCsv = async ({ filePath, defaultTopicId }) => {
     cleaned_count: cleanedCount,
     skipped_duplicates: skippedDuplicates,
     errors,
+    topic_breakdown: topicBreakdown,
   };
 };
 
