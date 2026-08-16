@@ -5,6 +5,7 @@ const pool = require('../config/db');
 const authRoutes    = require('./authRoutes');
 const adminRoutes   = require('./adminRoutes');
 const studentRoutes = require('./studentRoutes');
+const userRoutes    = require('./userRoutes');
 
 // Health check — pings the DB connection pool
 router.get('/health', async (req, res) => {
@@ -34,6 +35,7 @@ router.get('/health', async (req, res) => {
 
 router.use('/auth',  authRoutes);
 router.use('/admin', adminRoutes);
+router.use('/user',  userRoutes);
 router.use('/',      studentRoutes);
 
 module.exports = router;

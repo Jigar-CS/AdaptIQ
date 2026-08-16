@@ -31,6 +31,12 @@ const Profile = () => {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [resumeName, setResumeName] = useState('No resume uploaded');
   const [status, setStatus] = useState({ loading: false, message: '', error: '' });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordStatus, setPasswordStatus] = useState({ loading: false, message: '', error: '' });
   const navigate = useNavigate();
 
   const completionCount = useMemo(() => {
@@ -77,6 +83,11 @@ const Profile = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePasswordFormChange = (event) => {
+    const { name, value } = event.target;
+    setPasswordForm((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setStatus({ loading: true, message: '', error: '' });
@@ -91,6 +102,29 @@ const Profile = () => {
       }
     } catch (err) {
       setStatus({ loading: false, message: '', error: err.response?.data?.error?.message || 'Unable to save profile.' });
+    }
+  };
+
+  const handlePasswordSubmit = async (event) => {
+    event.preventDefault();
+    setPasswordStatus({ loading: true, message: '', error: '' });
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordStatus({ loading: false, message: '', error: 'New passwords do not match.' });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordStatus({ loading: false, message: '', error: 'Password must be at least 8 characters long.' });
+      return;
+    }
+
+    try {
+      await profileService.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      setPasswordStatus({ loading: false, message: 'Password changed successfully.', error: '' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setPasswordStatus({ loading: false, message: '', error: err.response?.data?.error?.message || 'Failed to update password.' });
     }
   };
 
@@ -183,7 +217,7 @@ const Profile = () => {
           </div>
         </section>
 
-        <form onSubmit={handleSubmit} className="card">
+        <form onSubmit={handleSubmit} className="card" style={{ marginBottom: 24 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 24 }}>
             <div>
               {PROFILE_FIELDS.map((field) => (
@@ -250,6 +284,60 @@ const Profile = () => {
             {status.loading ? 'Saving…' : 'Save Profile'}
           </button>
         </form>
+
+        {/* Change Password Card */}
+        <section className="card">
+          <h2 className={styles.sectionTitle}>Change Password</h2>
+          <form onSubmit={handlePasswordSubmit} style={{ maxWidth: 480 }}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="currentPassword">Current Password</label>
+              <input
+                id="currentPassword"
+                name="currentPassword"
+                type="password"
+                required
+                value={passwordForm.currentPassword}
+                onChange={handlePasswordFormChange}
+                className="form-input"
+                placeholder="••••••••"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="newPassword">New Password</label>
+              <input
+                id="newPassword"
+                name="newPassword"
+                type="password"
+                required
+                minLength={8}
+                value={passwordForm.newPassword}
+                onChange={handlePasswordFormChange}
+                className="form-input"
+                placeholder="At least 8 characters"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="confirmPassword">Confirm New Password</label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                value={passwordForm.confirmPassword}
+                onChange={handlePasswordFormChange}
+                className="form-input"
+                placeholder="Re-enter new password"
+              />
+            </div>
+
+            {passwordStatus.error && <div className="error-text">{passwordStatus.error}</div>}
+            {passwordStatus.message && <div style={{ color: 'var(--color-accent)', marginBottom: 12 }}>{passwordStatus.message}</div>}
+
+            <button type="submit" className="btn btn-outline" disabled={passwordStatus.loading}>
+              {passwordStatus.loading ? 'Updating…' : 'Update Password'}
+            </button>
+          </form>
+        </section>
       </main>
     </div>
   );

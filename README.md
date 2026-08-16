@@ -18,6 +18,7 @@
 - [Placement Readiness Score](#-placement-readiness-score)
 - [Development Phases](#-development-phases)
 - [Getting Started](#-getting-started)
+- [Demo Credentials](#-demo-credentials)
 - [Security](#-security)
 - [Documentation](#-documentation)
 
@@ -818,6 +819,17 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:5173` (Vite) and the API at `http://localhost:5000/api`.
+
+---
+
+## 🔑 Demo Credentials
+
+| Role | Email | Password | Access / Features |
+|---|---|---|---|
+| 👨‍💼 **Admin** | `admin@adaptiq.com` | `Admin@1234` | Topic & Question CRUD, CSV Import & Auto-Cleaner, Platform Stats |
+| 🎓 **Student** | `student@adaptiq.com` | `Student@123` | Adaptive Testing, Placement Readiness, Profile & File Uploads |
+
+> *(Alternatively, click **Register** on the login page to create a fresh student account.)*
 
 ---
 

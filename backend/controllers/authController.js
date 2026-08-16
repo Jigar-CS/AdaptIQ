@@ -36,4 +36,9 @@ const logout = (req, res) => {
   return success(res, {}, 'Logged out successfully');
 };
 
-module.exports = { register, login, refresh, logout };
+const forgotPassword = (req, res) => {
+  // Stub: full forgot-password flow (email verification, reset token) out of scope for MVP
+  return error(res, { code: 'NOT_IMPLEMENTED' }, 'Forgot password feature not yet implemented', 501);
+};
+
+module.exports = { register, login, refresh, logout, forgotPassword };

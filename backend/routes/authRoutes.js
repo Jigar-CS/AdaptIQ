@@ -21,5 +21,6 @@ router.post('/register', authLimiter, registerRules, validate, authController.re
 router.post('/login',    authLimiter, loginRules,    validate, authController.login);
 router.post('/refresh',  authController.refresh);
 router.post('/logout',   authenticate, authController.logout);
+router.post('/forgot-password', authController.forgotPassword);
 
 module.exports = router;

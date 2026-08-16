@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
+import RoleRoute from './RoleRoute';
 
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
@@ -28,10 +29,10 @@ const AppRouter = () => (
         <Route path="/profile"     element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         {/* Admin */}
-        <Route path="/admin"            element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
-        <Route path="/admin/topics"     element={<ProtectedRoute requiredRole="admin"><TopicManagement /></ProtectedRoute>} />
-        <Route path="/admin/questions"  element={<ProtectedRoute requiredRole="admin"><QuestionManagement /></ProtectedRoute>} />
-        <Route path="/admin/csv-import" element={<ProtectedRoute requiredRole="admin"><CsvImport /></ProtectedRoute>} />
+        <Route path="/admin"            element={<RoleRoute requiredRole="admin"><AdminDashboard /></RoleRoute>} />
+        <Route path="/admin/topics"     element={<RoleRoute requiredRole="admin"><TopicManagement /></RoleRoute>} />
+        <Route path="/admin/questions"  element={<RoleRoute requiredRole="admin"><QuestionManagement /></RoleRoute>} />
+        <Route path="/admin/csv-import" element={<RoleRoute requiredRole="admin"><CsvImport /></RoleRoute>} />
 
         {/* Default */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
