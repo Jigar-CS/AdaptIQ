@@ -60,6 +60,38 @@ const adminService = {
     });
     return data.data.report;
   },
+
+  // --- Users ---
+  getUsers: async (params = {}) => {
+    const { data } = await apiClient.get('/admin/users', { params });
+    return data.data;
+  },
+
+  updateUser: async (id, fields) => {
+    const { data } = await apiClient.put(`/admin/users/${id}`, fields);
+    return data.data;
+  },
+
+  deleteUser: async (id) => {
+    const { data } = await apiClient.delete(`/admin/users/${id}`);
+    return data.data;
+  },
+
+  // --- Analytics ---
+  getAnalyticsOverview: async () => {
+    const { data } = await apiClient.get('/admin/analytics/overview');
+    return data.data;
+  },
+
+  getTopicDifficultyBreakdown: async () => {
+    const { data } = await apiClient.get('/admin/analytics/topic-difficulty');
+    return data.data;
+  },
+
+  getActivityLogs: async (params = {}) => {
+    const { data } = await apiClient.get('/admin/activity-logs', { params });
+    return data.data;
+  },
 };
 
 export default adminService;

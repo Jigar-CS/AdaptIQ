@@ -31,8 +31,8 @@ const Login = () => {
     <div className={styles.authPage}>
       <div className={styles.authCard}>
         <div className={styles.logo}>
-          <span className={styles.logoIcon}>⚡</span>
           <span className={styles.logoText}>AdaptIQ</span>
+          <span className={styles.logoSub}>EdTech SaaS</span>
         </div>
         <h1 className={styles.title}>Welcome back</h1>
         <p className={styles.subtitle}>Sign in to continue your placement prep</p>
