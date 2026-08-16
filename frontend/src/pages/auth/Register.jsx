@@ -39,8 +39,8 @@ const Register = () => {
     <div className={styles.authPage}>
       <div className={styles.authCard}>
         <div className={styles.logo}>
-          <span className={styles.logoIcon}>⚡</span>
           <span className={styles.logoText}>AdaptIQ</span>
+          <span className={styles.logoSub}>EdTech SaaS</span>
         </div>
         <h1 className={styles.title}>Create account</h1>
         <p className={styles.subtitle}>Start your adaptive placement journey</p>

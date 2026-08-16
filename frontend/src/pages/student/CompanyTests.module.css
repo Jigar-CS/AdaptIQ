@@ -1,0 +1,110 @@
+.eligibilityCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 22px 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.eligibilityLeft { display: flex; align-items: center; gap: 16px; }
+
+.eligibilityIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.eligibilityTitle { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+.eligibilitySub { font-size: 13px; color: var(--color-text-muted); }
+
+.eligibilityStats {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.statBlock { min-width: 140px; }
+
+.statLabelRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+/* Main test card */
+.mainCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.mainCard.unlocked { border-color: var(--color-primary); }
+
+.mainIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.mainBody { flex: 1; min-width: 240px; }
+
+.mainTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.mainTitle { font-size: 20px; font-weight: 700; }
+
+.mainDesc { font-size: 14px; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 18px; }
+
+.metaRow {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.lockRequirement {
+  font-size: 12px;
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}

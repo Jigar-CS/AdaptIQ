@@ -1,0 +1,42 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.topicCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.topicCard:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.topicIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.topicName { font-size: 15px; font-weight: 700; }
+.topicDesc { font-size: 13px; color: var(--color-text-muted); flex: 1; line-height: 1.5; }
+
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--color-text-muted);
+}

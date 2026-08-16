@@ -1,131 +1,161 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import DashboardLayout from '../../components/layout/DashboardLayout';
+import { STUDENT_NAV } from '../../components/layout/navConfig';
+import ProgressRing from '../../components/common/ProgressRing';
 import profileService from '../../services/profileService';
+import placementScoreService from '../../services/placementScoreService';
+import { IconTarget, IconTrophy, IconSpark, IconCourses, IconAssignments, IconLock, IconArrowRight } from '../../components/icons/Icon';
 import styles from './Dashboard.module.css';
 
-const NAV_LINKS = [
-  { to: '/dashboard',   label: '🏠 Dashboard' },
-  { to: '/practice',    label: '📝 Practice' },
-  { to: '/adaptive',    label: '⚡ Adaptive Test' },
-  { to: '/performance', label: '📊 Performance' },
-  { to: '/profile',     label: '👤 Profile' },
-];
-
-const STAT_CARDS = [
-  { label: 'Placement Score',  value: '—',   sub: 'Not yet calculated',  color: 'var(--color-primary)' },
-  { label: 'Topics Attempted', value: '0',    sub: 'of 10 topics',        color: 'var(--color-accent)' },
-  { label: 'Questions Done',   value: '0',    sub: 'Total attempts',      color: 'var(--color-warning)' },
-  { label: 'Accuracy',         value: '—',    sub: 'Overall accuracy',    color: 'var(--color-danger)' },
-];
-
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [prompted, setPrompted] = useState(false);
   const [profileComplete, setProfileComplete] = useState(true);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [firstName, setFirstName] = useState('');
+
+  const [score, setScore] = useState(null); // { score, accuracy_component, speed_component, difficulty_mastery_component, misc_tests_completed }
+  const [globalRank, setGlobalRank] = useState(null);
+  const [streak, setStreak] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadProfile = async () => {
+    const load = async () => {
       try {
         const profile = await profileService.getProfile();
-        setPrompted(profile.profile_prompt_triggered);
-        setProfileComplete(profile.is_profile_complete);
+        setPrompted(!!profile.profile_prompt_triggered);
+        setProfileComplete(!!profile.is_profile_complete);
+        setFirstName((profile.name || '').split(' ')[0]);
       } catch {
-        setPrompted(false);
+        // profile not available yet — non-blocking
+      }
+
+      try {
+        const data = await placementScoreService.getLatest();
+        setScore(data);
+        setGlobalRank(data.global_rank ?? null);
+        setStreak(data.current_streak_days ?? null);
+      } catch {
+        setScore(null);
+      } finally {
+        setLoading(false);
       }
     };
-    loadProfile();
+    load();
   }, []);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
+  const readinessScore = score?.score ?? 0;
+  const miscCompleted = score?.misc_tests_completed ?? 0;
+  const unlocked = miscCompleted >= 5 && readinessScore >= 80;
 
   return (
-    <div className={styles.layout}>
-      {/* Sidebar */}
-      <aside className={styles.sidebar}>
-        <div className={styles.sidebarLogo}>
-          <span>⚡</span>
-          <span>AdaptIQ</span>
+    <DashboardLayout navItems={STUDENT_NAV} subtitle="EdTech SaaS">
+      <div className={styles.headerRow}>
+        <div>
+          <h1 className={styles.greeting}>Welcome back, {firstName || 'there'}.</h1>
+          <p className="text-muted text-sm">Your placement readiness is looking {readinessScore >= 70 ? 'strong' : readinessScore >= 40 ? 'steady' : 'early-stage'}.</p>
         </div>
-        <nav className={styles.nav}>
-          {NAV_LINKS.map((link) => (
-            <Link key={link.to} to={link.to} className={styles.navLink}
-              style={location.pathname === link.to ? { background: 'rgba(108,99,255,0.15)', color: 'var(--color-primary)' } : {}}>
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <button onClick={handleLogout} className={`btn btn-outline ${styles.logoutBtn}`}>
-          Sign Out
-        </button>
-      </aside>
+        <div className={styles.targetBadge}>
+          <span className={styles.targetDot} />
+          Target: Standard Company Test
+        </div>
+      </div>
 
-      {/* Main */}
-      <main className={styles.main}>
-        <header className={styles.header}>
-          <div>
-            <h1 className={styles.greeting}>Welcome back, {user?.name?.split(' ')[0]} 👋</h1>
-            <p className="text-muted text-sm">Ready to continue your placement prep?</p>
-          </div>
-        </header>
+      {prompted && !profileComplete && (
+        <div className={styles.gateBanner}>
+          <h2 style={{ margin: 0, fontSize: 16, color: 'var(--color-danger)' }}>Complete your profile to continue adaptive testing</h2>
+          <p className="text-sm" style={{ marginTop: 8 }}>
+            You've completed 3 topic-wise tests. Upload your photo, resume, and placement details to keep taking tests.
+          </p>
+          <button className="btn btn-primary mt-4" onClick={() => navigate('/profile')}>
+            Go to Profile
+          </button>
+        </div>
+      )}
 
-        {prompted && !profileComplete ? (
-          <section className={styles.section} style={{ background: 'rgba(255,92,92,0.1)', border: '1px solid rgba(255,92,92,0.2)', padding: '18px 24px', borderRadius: '16px', marginBottom: '24px' }}>
-            <h2 style={{ margin: 0, color: 'var(--color-danger)' }}>Complete your profile to continue adaptive testing</h2>
-            <p className="text-sm" style={{ marginTop: 8 }}>
-              You have been asked to finish your profile after your recent topic tests. Upload your photo, resume, and profile details on the Profile page.
-            </p>
-            <button className="btn btn-primary mt-4" onClick={() => navigate('/profile')}>
-              Go to Profile
-            </button>
-          </section>
-        ) : null}
+      {/* Top Grid: Readiness Hub + side cards */}
+      <div className={styles.topGrid}>
+        <div className={styles.readinessCard}>
+          <ProgressRing value={readinessScore} size={168} strokeWidth={13} />
+          <div className={styles.readinessInfo}>
+            <div className={styles.readinessTitle}>Placement Readiness Hub</div>
+            <p className={styles.readinessSub}>Based on your recent Miscellaneous tests and mock assessments.</p>
 
-        {/* Stats Grid */}
-        <section className={styles.statsGrid}>
-          {STAT_CARDS.map((card) => (
-            <div key={card.label} className={styles.statCard}>
-              <div className={styles.statValue} style={{ color: card.color }}>{card.value}</div>
-              <div className={styles.statLabel}>{card.label}</div>
-              <div className={styles.statSub}>{card.sub}</div>
+            <div className={styles.metricRow}>
+              <div className={styles.metricLabelRow}><span>Accuracy</span><span>{Math.round(score?.accuracy_component ?? 0)}%</span></div>
+              <div className="progress-track"><div className="progress-fill" style={{ width: `${score?.accuracy_component ?? 0}%` }} /></div>
             </div>
-          ))}
-        </section>
-
-        {/* Quick Actions */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Quick Start</h2>
-          <div className={styles.quickGrid}>
-            <Link to="/practice" className={styles.quickCard}>
-              <span className={styles.quickIcon}>📝</span>
-              <div>
-                <div className={styles.quickTitle}>Topic Practice</div>
-                <div className={styles.quickSub}>Practice by topic at fixed difficulty</div>
-              </div>
-            </Link>
-            <Link to="/adaptive" className={styles.quickCard} style={{ borderColor: 'rgba(108,99,255,0.3)' }}>
-              <span className={styles.quickIcon}>⚡</span>
-              <div>
-                <div className={styles.quickTitle}>Adaptive Test</div>
-                <div className={styles.quickSub}>AI-adjusted difficulty based on your performance</div>
-              </div>
-            </Link>
-            <Link to="/performance" className={styles.quickCard}>
-              <span className={styles.quickIcon}>📊</span>
-              <div>
-                <div className={styles.quickTitle}>View Analytics</div>
-                <div className={styles.quickSub}>Track accuracy, speed, and topic coverage</div>
-              </div>
-            </Link>
+            <div className={styles.metricRow}>
+              <div className={styles.metricLabelRow}><span>Speed</span><span>{Math.round(score?.speed_component ?? 0)}%</span></div>
+              <div className="progress-track"><div className="progress-fill warning" style={{ width: `${score?.speed_component ?? 0}%` }} /></div>
+            </div>
+            <div className={styles.metricRow}>
+              <div className={styles.metricLabelRow}><span>Subject Mastery</span><span>{Math.round(score?.difficulty_mastery_component ?? 0)}%</span></div>
+              <div className="progress-track"><div className="progress-fill" style={{ width: `${score?.difficulty_mastery_component ?? 0}%` }} /></div>
+            </div>
           </div>
-        </section>
-      </main>
-    </div>
+        </div>
+
+        <div className={styles.sideCards}>
+          <div className={styles.sideCard}>
+            <div className={styles.sideCardTop}><IconTrophy width={15} height={15} /> Global Rank</div>
+            <div className={styles.sideCardValue}>{globalRank ? `#${globalRank}` : '—'}</div>
+            <div className={`${styles.sideCardSub} ${globalRank ? '' : 'neutral'}`}>
+              {globalRank ? 'Keep climbing this week' : 'Complete a test to get ranked'}
+            </div>
+          </div>
+          <div className={styles.sideCard}>
+            <div className={styles.sideCardTop}><IconSpark width={15} height={15} /> Current Streak</div>
+            <div className={styles.sideCardValue}>{streak ? `${streak} Days` : '0 Days'}</div>
+            <div className={`${styles.sideCardSub} ${streak ? '' : 'neutral'}`}>
+              {streak ? 'Keep it up! Don\u2019t break the streak.' : 'Start practicing to build a streak'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Test Selection */}
+      <h2 className={styles.sectionTitle}><IconTarget width={17} height={17} /> Test Selection</h2>
+      <div className={styles.testGrid}>
+        <div className={styles.testCard}>
+          <span className="badge badge-primary" style={{ position: 'absolute', top: 20, right: 20 }}>60+ Tests</span>
+          <div className={styles.testIconWrap}><IconCourses /></div>
+          <div className={styles.testTitle}>Topic Practice</div>
+          <p className={styles.testDesc}>Drill down into specific Data Structures and Algorithms topics with adaptive difficulty.</p>
+          <button className="btn btn-outline" onClick={() => navigate('/practice')}>
+            Start Practice <IconArrowRight width={15} height={15} />
+          </button>
+        </div>
+
+        <div className={styles.testCard}>
+          <span className="badge badge-neutral" style={{ position: 'absolute', top: 20, right: 20 }}>New Scenario</span>
+          <div className={styles.testIconWrap}><IconAssignments /></div>
+          <div className={styles.testTitle}>Miscellaneous Test</div>
+          <p className={styles.testDesc}>Quantitative, Verbal, and Logical reasoning across every topic — feeds your Placement Score.</p>
+          <button className="btn btn-outline" onClick={() => navigate('/adaptive')}>
+            Start Assessment <IconArrowRight width={15} height={15} />
+          </button>
+        </div>
+
+        <div className={`${styles.testCard} ${unlocked ? '' : styles.locked}`}>
+          <span className="badge badge-neutral" style={{ position: 'absolute', top: 20, right: 20 }}>
+            {unlocked ? 'Unlocked' : `${miscCompleted}/5 Tests`}
+          </span>
+          <div className={styles.testIconWrap}>{unlocked ? <IconAssignments /> : <IconLock />}</div>
+          <div className={styles.testTitle}>Company Mock Test</div>
+          <p className={styles.testDesc}>
+            {unlocked
+              ? 'Standard company-level placement test — timed, fixed question set.'
+              : miscCompleted < 5
+                ? 'Complete at least 5 Miscellaneous tests to unlock.'
+                : `Your score is ${Math.round(readinessScore)}/100. Reach 80 to unlock.`}
+          </p>
+          <button className="btn btn-outline" disabled={!unlocked} onClick={() => navigate('/company-tests')}>
+            {unlocked ? 'Start Mock Test' : 'Locked'} {unlocked && <IconArrowRight width={15} height={15} />}
+          </button>
+        </div>
+      </div>
+    </DashboardLayout>
   );
 };
 
