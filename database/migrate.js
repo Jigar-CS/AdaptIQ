@@ -109,7 +109,12 @@ async function migrate() {
 
     await connection.end();
   } catch (err) {
-    console.error('❌ Migration failed:', err.message);
+    if (err && err.name === 'AggregateError' && Array.isArray(err.errors)) {
+      console.error('❌ Migration failed - AggregateError with the following errors:');
+      for (const e of err.errors) console.error(e && e.stack ? e.stack : e);
+    } else {
+      console.error('❌ Migration failed:', err && err.stack ? err.stack : err);
+    }
     if (connection) await connection.end();
     process.exit(1);
   }
