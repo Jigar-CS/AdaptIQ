@@ -11,6 +11,8 @@ const authorize = require('../middleware/authorize');
 const validate = require('../middleware/validate');
 const topicController = require('../controllers/topicController');
 const questionController = require('../controllers/questionController');
+const userController = require('../controllers/userController');
+const analyticsController = require('../controllers/analyticsController');
 const { UPLOAD_DIR } = require('../config/env');
 
 const uploadDir = path.join(__dirname, '..', UPLOAD_DIR);
@@ -106,9 +108,17 @@ router.post(
   questionController.importCsv
 );
 
-// Stub routes for remaining admin features (Phases 6 & 11)
-router.get('/users', authenticate, authorize('admin'), (req, res) => res.json({ success: true, data: { users: [] }, message: 'Not yet implemented' }));
-router.get('/analytics/overview', authenticate, authorize('admin'), (req, res) => res.json({ success: true, data: {}, message: 'Not yet implemented' }));
-router.get('/activity-logs', authenticate, authorize('admin'), (req, res) => res.json({ success: true, data: { logs: [] }, message: 'Not yet implemented' }));
+// --- User Management (Admin) ---
+router.get('/users',     authenticate, authorize('admin'), userController.getAdminUsers);
+router.get('/users/:id', authenticate, authorize('admin'), userController.getAdminUser);
+router.put('/users/:id', authenticate, authorize('admin'), userController.updateAdminUser);
+router.delete('/users/:id', authenticate, authorize('admin'), userController.deleteAdminUser);
+
+// --- Analytics (Admin) ---
+router.get('/analytics/overview',         authenticate, authorize('admin'), analyticsController.getOverview);
+router.get('/analytics/topic-difficulty', authenticate, authorize('admin'), analyticsController.getTopicDifficultyBreakdown);
+
+// --- Activity Logs stub (Phase 11) ---
+router.get('/activity-logs', authenticate, authorize('admin'), (req, res) => res.json({ success: true, data: { logs: [], total: 0 }, message: 'Phase 11 — not yet implemented' }));
 
 module.exports = router;
