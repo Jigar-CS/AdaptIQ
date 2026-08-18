@@ -10,6 +10,8 @@ const profileGate = require('../middleware/profileGate');
 const validate = require('../middleware/validate');
 const userController = require('../controllers/userController');
 const topicController = require('../controllers/topicController');
+const adaptiveController = require('../controllers/adaptiveController');
+const performanceController = require('../controllers/performanceController');
 const { UPLOAD_DIR, MAX_PHOTO_SIZE, MAX_RESUME_SIZE } = require('../config/env');
 
 const uploadDir = path.join(__dirname, '..', UPLOAD_DIR);
@@ -106,11 +108,12 @@ router.post('/practice/start',               authenticate, stub('Practice not ye
 router.post('/practice/:testId/answer',      authenticate, stub('Practice not yet implemented'));
 router.post('/practice/:testId/complete',    authenticate, stub('Practice not yet implemented'));
 
-router.post('/adaptive/start',               authenticate, profileGate, stub('Adaptive engine not yet implemented'));
-router.get('/adaptive/:testId/next-batch',   authenticate, stub('Adaptive engine not yet implemented'));
-router.post('/adaptive/:testId/answer',      authenticate, stub('Adaptive engine not yet implemented'));
-router.get('/adaptive/:testId/status',       authenticate, stub('Adaptive engine not yet implemented'));
-router.post('/adaptive/:testId/complete',    authenticate, stub('Adaptive engine not yet implemented'));
+// Adaptive Test (Topic or Full)
+router.post('/adaptive/start',               authenticate, profileGate, adaptiveController.start);
+router.get('/adaptive/:testId/next-batch',   authenticate, adaptiveController.getNextBatch);
+router.post('/adaptive/:testId/answer',      authenticate, adaptiveController.submitAnswer);
+router.get('/adaptive/:testId/status',       authenticate, adaptiveController.getStatus);
+router.post('/adaptive/:testId/complete',    authenticate, adaptiveController.complete);
 
 router.get('/placement-score',               authenticate, stub('Placement score not yet implemented'));
 router.get('/placement-score/history',       authenticate, stub('Placement score not yet implemented'));
@@ -118,10 +121,13 @@ router.get('/placement-score/history',       authenticate, stub('Placement score
 router.get('/company-tests',                 authenticate, stub('Company tests not yet implemented'));
 router.post('/company-tests/:id/start',      authenticate, stub('Company tests not yet implemented'));
 
-router.get('/performance/summary',           authenticate, stub('Analytics not yet implemented'));
-router.get('/performance/by-topic',          authenticate, stub('Analytics not yet implemented'));
-router.get('/performance/history',           authenticate, stub('Analytics not yet implemented'));
+// Performance & Analytics
+router.get('/performance/summary',           authenticate, performanceController.getSummary);
+router.get('/performance/by-topic',          authenticate, performanceController.getByTopic);
+router.get('/performance/history',           authenticate, performanceController.getHistory);
 
-router.get('/recommendations',               authenticate, stub('Recommendations not yet implemented'));
+// Recommendations
+router.get('/recommendations',               authenticate, performanceController.getRecommendations);
+router.put('/recommendations/:id/dismiss',   authenticate, performanceController.dismissRecommendation);
 
 module.exports = router;
