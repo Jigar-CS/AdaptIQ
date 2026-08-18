@@ -82,12 +82,27 @@ const AdaptiveTest = () => {
   }
 
   if (test.status === 'error') {
+    const isProfileGate =
+      test.errorCode === 'PROFILE_INCOMPLETE' ||
+      (typeof test.error === 'string' && test.error.toLowerCase().includes('profile'));
+
     return (
       <div className={styles.page}>
         <div className={styles.frame}>
           <div className={styles.centerState}>
-            <p className="error-text">{test.error}</p>
-            <button className="btn btn-outline mt-4" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+            <p className="error-text" style={{ fontSize: 16, marginBottom: 16 }}>
+              {test.error || 'An error occurred.'}
+            </p>
+            <div className="flex gap-3" style={{ justifyContent: 'center' }}>
+              {isProfileGate && (
+                <button className="btn btn-primary" onClick={() => navigate('/profile')}>
+                  Complete Profile
+                </button>
+              )}
+              <button className="btn btn-outline" onClick={() => navigate('/dashboard')}>
+                Back to Dashboard
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -96,6 +111,8 @@ const AdaptiveTest = () => {
 
   if (test.status === 'completed') {
     const accuracy = test.answered ? Math.round((test.correctCount / test.answered) * 100) : 0;
+    const profilePrompt = test.resultData?.profile_prompt_triggered;
+
     return (
       <div className={styles.page}>
         <div className={styles.frame}>
@@ -103,11 +120,37 @@ const AdaptiveTest = () => {
             <h1 style={{ fontSize: 24, marginBottom: 8 }}>Test Complete 🎉</h1>
             <p className="text-muted" style={{ marginBottom: 24 }}>
               {topicName ? `${topicName} — ` : 'Miscellaneous — '}
-              You answered {test.correctCount} of {test.answered} correctly ({accuracy}% accuracy).
+              You answered {test.correctCount} of {test.answered} questions correctly ({accuracy}% accuracy).
             </p>
+
+            {profilePrompt && (
+              <div
+                style={{
+                  background: 'var(--color-violet-soft)',
+                  border: '1px solid var(--color-violet)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '16px 20px',
+                  marginBottom: 24,
+                  textAlign: 'left',
+                }}
+              >
+                <strong style={{ color: 'var(--color-violet)' }}>🌟 Milestone Reached!</strong>
+                <p className="text-sm text-muted" style={{ margin: '6px 0 12px' }}>
+                  You have completed 3 topic tests. Please update your profile with your resume and placement details to unlock further practice.
+                </p>
+                <button className="btn btn-primary btn-sm" onClick={() => navigate('/profile')}>
+                  Update Profile Now
+                </button>
+              </div>
+            )}
+
             <div className="flex gap-3" style={{ justifyContent: 'center' }}>
-              <button className="btn btn-outline" onClick={() => navigate('/performance')}>View Analytics</button>
-              <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+              <button className="btn btn-outline" onClick={() => navigate('/performance')}>
+                View Analytics
+              </button>
+              <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+                Back to Dashboard
+              </button>
             </div>
           </div>
         </div>
@@ -168,7 +211,8 @@ const AdaptiveTest = () => {
 
             let stateClass = '';
             if (submitted) {
-              if (key === q.correct_option) stateClass = styles.correct;
+              const correctOpt = test.feedback?.correctOption || q.correct_option;
+              if (key === correctOpt) stateClass = styles.correct;
               else if (key === selected) stateClass = styles.incorrect;
             } else if (key === selected) {
               stateClass = styles.selected;
