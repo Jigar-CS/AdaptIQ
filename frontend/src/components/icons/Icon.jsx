@@ -116,6 +116,13 @@ export const IconFlag = (p) => (
   </svg>
 );
 
+export const IconArrowLeft = (p) => (
+  <svg {...base} {...p}>
+    <path d="M19 12H5" />
+    <path d="M11 18l-6-6 6-6" />
+  </svg>
+);
+
 export const IconArrowRight = (p) => (
   <svg {...base} {...p}>
     <path d="M5 12h14" />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useAdaptiveTest from '../../hooks/useAdaptiveTest';
-import { IconClock, IconFlag, IconArrowRight } from '../../components/icons/Icon';
+import { IconClock, IconFlag, IconArrowRight, IconArrowLeft } from '../../components/icons/Icon';
 import styles from './AdaptiveTest.module.css';
 
 const DIFFICULTY_STYLES = {
@@ -28,6 +28,15 @@ const AdaptiveTest = () => {
   const [submitted, setSubmitted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [flagged, setFlagged] = useState({});
+  const [showExitModal, setShowExitModal] = useState(false);
+
+  const handleExitConfirm = () => {
+    if (topicId) {
+      navigate('/topic-practice');
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   useEffect(() => {
     test.start(topicId);
@@ -74,7 +83,15 @@ const AdaptiveTest = () => {
       <div className={styles.page}>
         <div className={styles.frame}>
           <div className={styles.centerState}>
-            <p className="text-muted">Preparing your adaptive session…</p>
+            <p className="text-muted" style={{ marginBottom: 16 }}>Preparing your adaptive session…</p>
+            <button
+              type="button"
+              className={styles.backBtn}
+              style={{ margin: '0 auto' }}
+              onClick={() => (topicId ? navigate('/topic-practice') : navigate('/dashboard'))}
+            >
+              <IconArrowLeft width={14} height={14} /> Back
+            </button>
           </div>
         </div>
       </div>
@@ -175,13 +192,24 @@ const AdaptiveTest = () => {
     <div className={styles.page}>
       <div className={styles.frame}>
         <div className={styles.topRow}>
-          <div className={styles.timer}>
-            <IconClock width={15} height={15} /> {formatTime(elapsed)}
+          <div className={styles.topBarLeft}>
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={() => setShowExitModal(true)}
+              title="Exit test session"
+            >
+              <IconArrowLeft width={14} height={14} />
+              <span>Exit Test</span>
+            </button>
+            <div className={styles.timer}>
+              <IconClock width={15} height={15} /> {formatTime(elapsed)}
+            </div>
           </div>
 
           <div className={styles.progressWrap}>
             <div className={styles.progressLabel}>
-              QUESTION {questionNumber} OF {test.totalQuestions}
+              {topicName ? `${topicName.toUpperCase()} • ` : ''}QUESTION {questionNumber} OF {test.totalQuestions}
             </div>
             <div className="progress-track">
               <div className="progress-fill" style={{ width: `${test.progress}%` }} />
@@ -254,6 +282,33 @@ const AdaptiveTest = () => {
           )}
         </div>
       </div>
+
+      {showExitModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowExitModal(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Exit Test Session?</h3>
+            <p className={styles.modalText}>
+              Are you sure you want to leave? Questions answered so far have been saved, but this active test session will be closed.
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setShowExitModal(false)}
+              >
+                Resume Test
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={handleExitConfirm}
+              >
+                Exit to {topicId ? 'Topics' : 'Dashboard'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

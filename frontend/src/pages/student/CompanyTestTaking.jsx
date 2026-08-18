@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import companyTestService from '../../services/companyTestService';
-import { IconClock, IconArrowRight } from '../../components/icons/Icon';
+import { IconClock, IconArrowRight, IconArrowLeft } from '../../components/icons/Icon';
 import styles from './AdaptiveTest.module.css';
 
 const OPTION_KEYS = ['A', 'B', 'C', 'D'];
@@ -22,6 +22,7 @@ const CompanyTestTaking = () => {
   const [secondsLeft, setSecondsLeft] = useState(null);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
+  const [showExitModal, setShowExitModal] = useState(false);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -129,8 +130,19 @@ const CompanyTestTaking = () => {
     <div className={styles.page}>
       <div className={styles.frame} style={{ borderColor: 'var(--color-primary-glow)', boxShadow: 'var(--shadow-glow-primary)' }}>
         <div className={styles.topRow}>
-          <div className={styles.timer} style={{ color: secondsLeft < 60 ? 'var(--color-danger)' : 'var(--color-text-muted)' }}>
-            <IconClock width={15} height={15} /> {formatTime(secondsLeft)}
+          <div className={styles.topBarLeft}>
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={() => setShowExitModal(true)}
+              title="Exit test session"
+            >
+              <IconArrowLeft width={14} height={14} />
+              <span>Exit Test</span>
+            </button>
+            <div className={styles.timer} style={{ color: secondsLeft < 60 ? 'var(--color-danger)' : 'var(--color-text-muted)' }}>
+              <IconClock width={15} height={15} /> {formatTime(secondsLeft)}
+            </div>
           </div>
 
           <div className={styles.progressWrap}>
@@ -170,6 +182,33 @@ const CompanyTestTaking = () => {
           </button>
         </div>
       </div>
+
+      {showExitModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowExitModal(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Exit Company Mock Test?</h3>
+            <p className={styles.modalText}>
+              Are you sure you want to leave? Your submitted answers so far have been saved, but you will leave this timed session.
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setShowExitModal(false)}
+              >
+                Resume Test
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={() => navigate('/company-tests')}
+              >
+                Exit to Company Tests
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
