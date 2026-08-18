@@ -24,9 +24,11 @@ export default function useAdaptiveTest() {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answered, setAnswered] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
-  const [feedback, setFeedback] = useState(null); // { isCorrect, explanation }
+  const [feedback, setFeedback] = useState(null); // { isCorrect, correctOption, explanation }
   const [status, setStatus] = useState('idle'); // idle | loading | active | completed | error
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
+  const [resultData, setResultData] = useState(null);
   const questionStartRef = useRef(Date.now());
 
   const currentQuestion = batch[questionIndex] || null;
@@ -35,6 +37,8 @@ export default function useAdaptiveTest() {
   const start = useCallback(async (topicId) => {
     setStatus('loading');
     setError('');
+    setErrorCode('');
+    setResultData(null);
     try {
       const data = await adaptiveService.start(topicId);
       setTestId(data.test_id || data.id);
@@ -49,14 +53,32 @@ export default function useAdaptiveTest() {
       questionStartRef.current = Date.now();
       setStatus('active');
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Unable to start the test.');
+      const msg = err.response?.data?.error?.message || err.response?.data?.message || 'Unable to start the test.';
+      const code = err.response?.data?.error?.code || err.response?.data?.code || '';
+      setError(msg);
+      setErrorCode(code);
       setStatus('error');
     }
   }, []);
 
+  const finish = useCallback(async (activeTestId) => {
+    const idToComplete = activeTestId || testId;
+    if (!idToComplete) return;
+    setStatus('loading');
+    try {
+      const result = await adaptiveService.complete(idToComplete);
+      setResultData(result);
+      setStatus('completed');
+      return result;
+    } catch (err) {
+      setError(err.response?.data?.error?.message || 'Failed to complete the test.');
+      setStatus('error');
+    }
+  }, [testId]);
+
   const answer = useCallback(async (selectedOption) => {
     if (!currentQuestion || !testId) return;
-    const responseTimeSeconds = (Date.now() - questionStartRef.current) / 1000;
+    const responseTimeSeconds = Math.max(1, Math.round((Date.now() - questionStartRef.current) / 1000));
 
     try {
       const result = await adaptiveService.submitAnswer(testId, {
@@ -65,7 +87,11 @@ export default function useAdaptiveTest() {
         response_time_seconds: responseTimeSeconds,
       });
 
-      setFeedback({ isCorrect: result.is_correct, explanation: result.explanation });
+      setFeedback({
+        isCorrect: result.is_correct,
+        correctOption: result.correct_option || currentQuestion.correct_option,
+        explanation: result.explanation,
+      });
       setAnswered((n) => n + 1);
       if (result.is_correct) setCorrectCount((n) => n + 1);
       if (result.new_difficulty) setDifficulty(result.new_difficulty);
@@ -103,21 +129,7 @@ export default function useAdaptiveTest() {
       setError(err.response?.data?.error?.message || 'Failed to load next batch.');
       setStatus('error');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionIndex, batch.length, answered, testId, batchNumber]);
-
-  const finish = useCallback(async () => {
-    if (!testId) return;
-    setStatus('loading');
-    try {
-      const result = await adaptiveService.complete(testId);
-      setStatus('completed');
-      return result;
-    } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to complete the test.');
-      setStatus('error');
-    }
-  }, [testId]);
+  }, [questionIndex, batch.length, answered, testId, batchNumber, finish]);
 
   return {
     testId,
@@ -132,6 +144,8 @@ export default function useAdaptiveTest() {
     feedback,
     status,
     error,
+    errorCode,
+    resultData,
     totalQuestions: TOTAL_QUESTIONS,
     batchSize: BATCH_SIZE,
     start,
