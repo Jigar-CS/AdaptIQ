@@ -3,6 +3,7 @@ const TestQuestion = require('../models/TestQuestion');
 const UserAnswer = require('../models/UserAnswer');
 const Question = require('../models/Question');
 const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
 const adaptiveEngine = require('../services/adaptiveEngine');
 const questionSelector = require('../services/questionSelector');
 const performanceService = require('../services/performanceService');
@@ -81,7 +82,10 @@ const adaptiveController = {
       if (batchNumber === 1) {
         difficulty = await Test.getLastKnownDifficulty(req.user.id, test.topic_id);
       } else {
-        difficulty = await TestQuestion.getLatestDifficulty(testId);
+        // Use the most recent adaptive engine decision (recorded on every 5th answer),
+        // falling back to the last served batch's difficulty if no decision was logged yet.
+        difficulty = (await ActivityLog.getLatestDifficultyDecision(testId))
+          || (await TestQuestion.getLatestDifficulty(testId));
       }
 
       const questions = await questionSelector.getNextBatch({
@@ -207,7 +211,8 @@ const adaptiveController = {
 
       const servedCount = await TestQuestion.getServedCount(testId);
       const answeredCount = await UserAnswer.countByTestId(testId);
-      const currentDifficulty = await TestQuestion.getLatestDifficulty(testId);
+      const currentDifficulty = (await ActivityLog.getLatestDifficultyDecision(testId))
+        || (await TestQuestion.getLatestDifficulty(testId));
 
       return res.json({
         success: true,

@@ -32,7 +32,7 @@ const AdaptiveTest = () => {
 
   const handleExitConfirm = () => {
     if (topicId) {
-      navigate('/topic-practice');
+      navigate('/practice');
     } else {
       navigate('/dashboard');
     }
@@ -88,7 +88,7 @@ const AdaptiveTest = () => {
               type="button"
               className={styles.backBtn}
               style={{ margin: '0 auto' }}
-              onClick={() => (topicId ? navigate('/topic-practice') : navigate('/dashboard'))}
+              onClick={() => (topicId ? navigate('/practice') : navigate('/dashboard'))}
             >
               <IconArrowLeft width={14} height={14} /> Back
             </button>
