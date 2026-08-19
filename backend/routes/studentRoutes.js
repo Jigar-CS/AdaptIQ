@@ -11,6 +11,7 @@ const validate = require('../middleware/validate');
 const userController = require('../controllers/userController');
 const topicController = require('../controllers/topicController');
 const adaptiveController = require('../controllers/adaptiveController');
+const placementScoreController = require('../controllers/placementScoreController');
 const performanceController = require('../controllers/performanceController');
 const { UPLOAD_DIR, MAX_PHOTO_SIZE, MAX_RESUME_SIZE } = require('../config/env');
 
@@ -115,8 +116,9 @@ router.post('/adaptive/:testId/answer',      authenticate, adaptiveController.su
 router.get('/adaptive/:testId/status',       authenticate, adaptiveController.getStatus);
 router.post('/adaptive/:testId/complete',    authenticate, adaptiveController.complete);
 
-router.get('/placement-score',               authenticate, stub('Placement score not yet implemented'));
-router.get('/placement-score/history',       authenticate, stub('Placement score not yet implemented'));
+// Placement Score
+router.get('/placement-score',               authenticate, placementScoreController.getLatest);
+router.get('/placement-score/history',       authenticate, placementScoreController.getHistory);
 
 router.get('/company-tests',                 authenticate, stub('Company tests not yet implemented'));
 router.post('/company-tests/:id/start',      authenticate, stub('Company tests not yet implemented'));

@@ -6,6 +6,7 @@ const User = require('../models/User');
 const adaptiveEngine = require('../services/adaptiveEngine');
 const questionSelector = require('../services/questionSelector');
 const performanceService = require('../services/performanceService');
+const placementScoreService = require('../services/placementScoreService');
 
 const adaptiveController = {
   /**
@@ -246,6 +247,12 @@ const adaptiveController = {
       performanceService.processTestCompletion(
         testId, req.user.id, test.test_type, test.topic_id
       ).catch((err) => console.error('Performance aggregation failed:', err.message));
+
+      // Recalculate placement score after every completed full_adaptive test
+      if (test.test_type === 'full_adaptive') {
+        placementScoreService.recalculate(req.user.id)
+          .catch((err) => console.error('Placement score recalculation failed:', err.message));
+      }
 
       if (test.test_type === 'topic_adaptive') {
         const completedTopicCount = await Test.countCompletedByType(req.user.id, 'topic_adaptive');
