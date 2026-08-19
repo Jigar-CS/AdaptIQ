@@ -76,24 +76,36 @@ const Dashboard = () => {
       {/* Top Grid: Readiness Hub + side cards */}
       <div className={styles.topGrid}>
         <div className={styles.readinessCard}>
-          <ProgressRing value={readinessScore} size={168} strokeWidth={13} />
-          <div className={styles.readinessInfo}>
-            <div className={styles.readinessTitle}>Placement Readiness Hub</div>
-            <p className={styles.readinessSub}>Based on your recent Miscellaneous tests and mock assessments.</p>
+          {loading ? (
+            <div style={{ width: '100%', textAlign: 'center', padding: '40px 0' }}>
+              <div className="text-muted text-sm">Loading placement score…</div>
+            </div>
+          ) : (
+            <>
+              <ProgressRing value={readinessScore} size={168} strokeWidth={13} />
+              <div className={styles.readinessInfo}>
+                <div className={styles.readinessTitle}>Placement Readiness Hub</div>
+                <p className={styles.readinessSub}>
+                  {miscCompleted === 0
+                    ? 'Complete your first Miscellaneous test to generate your score.'
+                    : 'Based on your recent Miscellaneous tests and mock assessments.'}
+                </p>
 
-            <div className={styles.metricRow}>
-              <div className={styles.metricLabelRow}><span>Accuracy</span><span>{Math.round(score?.accuracy_component ?? 0)}%</span></div>
-              <div className="progress-track"><div className="progress-fill" style={{ width: `${score?.accuracy_component ?? 0}%` }} /></div>
-            </div>
-            <div className={styles.metricRow}>
-              <div className={styles.metricLabelRow}><span>Speed</span><span>{Math.round(score?.speed_component ?? 0)}%</span></div>
-              <div className="progress-track"><div className="progress-fill warning" style={{ width: `${score?.speed_component ?? 0}%` }} /></div>
-            </div>
-            <div className={styles.metricRow}>
-              <div className={styles.metricLabelRow}><span>Subject Mastery</span><span>{Math.round(score?.difficulty_mastery_component ?? 0)}%</span></div>
-              <div className="progress-track"><div className="progress-fill" style={{ width: `${score?.difficulty_mastery_component ?? 0}%` }} /></div>
-            </div>
-          </div>
+                <div className={styles.metricRow}>
+                  <div className={styles.metricLabelRow}><span>Accuracy</span><span>{Math.round(score?.accuracy_component ?? 0)}%</span></div>
+                  <div className="progress-track"><div className="progress-fill" style={{ width: `${score?.accuracy_component ?? 0}%` }} /></div>
+                </div>
+                <div className={styles.metricRow}>
+                  <div className={styles.metricLabelRow}><span>Speed</span><span>{Math.round(score?.speed_component ?? 0)}%</span></div>
+                  <div className="progress-track"><div className="progress-fill warning" style={{ width: `${score?.speed_component ?? 0}%` }} /></div>
+                </div>
+                <div className={styles.metricRow}>
+                  <div className={styles.metricLabelRow}><span>Subject Mastery</span><span>{Math.round(score?.difficulty_mastery_component ?? 0)}%</span></div>
+                  <div className="progress-track"><div className="progress-fill" style={{ width: `${score?.difficulty_mastery_component ?? 0}%` }} /></div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className={styles.sideCards}>

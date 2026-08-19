@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import Topbar from '../../components/layout/Topbar';
 import { STUDENT_NAV } from '../../components/layout/navConfig';
 import performanceService from '../../services/performanceService';
-import { IconSpark, IconClock, IconCheck, IconAssignments } from '../../components/icons/Icon';
+import placementScoreService from '../../services/placementScoreService';
+import { IconSpark, IconClock, IconCheck, IconAssignments, IconTrophy } from '../../components/icons/Icon';
 import styles from './PerformanceDashboard.module.css';
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -22,6 +23,8 @@ const PerformanceDashboard = () => {
   const [history, setHistory] = useState([]);
   const [topics, setTopics] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [scoreHistory, setScoreHistory] = useState([]);
+  const [latestScore, setLatestScore] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,6 +35,8 @@ const PerformanceDashboard = () => {
         performanceService.getHistory(),
         performanceService.getByTopic(),
         performanceService.getRecommendations(),
+        placementScoreService.getHistory(),
+        placementScoreService.getLatest(),
       ]);
 
       if (results[0].status === 'fulfilled' && results[0].value) {
@@ -52,6 +57,14 @@ const PerformanceDashboard = () => {
         const arr = Array.isArray(val?.recommendations) ? val.recommendations : Array.isArray(val) ? val : [];
         setRecommendations(arr);
       }
+      if (results[4].status === 'fulfilled') {
+        const val = results[4].value;
+        const arr = Array.isArray(val) ? val : [];
+        setScoreHistory(arr);
+      }
+      if (results[5].status === 'fulfilled' && results[5].value) {
+        setLatestScore(results[5].value);
+      }
       setLoading(false);
     };
     load();
@@ -61,6 +74,15 @@ const PerformanceDashboard = () => {
   const chartData = history
     .filter((h) => h.date)
     .map((h) => ({ date: h.date, score: Math.round(h.accuracy_percent ?? 0) }));
+
+  // Placement score trend data
+  const scoreChartData = scoreHistory.map((entry) => ({
+    date: entry.calculated_at ? new Date(entry.calculated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '',
+    score: Math.round(entry.score ?? 0),
+    accuracy: Math.round(entry.accuracy_component ?? 0),
+    speed: Math.round(entry.speed_component ?? 0),
+    mastery: Math.round(entry.difficulty_mastery_component ?? 0),
+  }));
 
   const dismissRec = async (id) => {
     try {
@@ -108,6 +130,80 @@ const PerformanceDashboard = () => {
               <div className={styles.statValueRow}>
                 <span className={styles.statValue}>{history.length}</span>
               </div>
+            </div>
+          </div>
+
+          <div className={styles.mainGrid}>
+            {/* Placement Score Trend Chart */}
+            <div className={styles.chartCard}>
+              <div className={styles.chartHeader}>
+                <span className={styles.chartTitle}>Placement Score Trend</span>
+                {latestScore && (
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)' }}>
+                    Current: {Math.round(latestScore.score ?? 0)}/100
+                  </span>
+                )}
+              </div>
+              {scoreChartData.length === 0 ? (
+                <div className="text-muted text-sm" style={{ padding: '60px 0', textAlign: 'center' }}>
+                  Complete a Miscellaneous test to start tracking your Placement Score.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={scoreChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--color-border)" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--color-text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                    <Tooltip
+                      contentStyle={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 10, padding: '10px 14px' }}
+                      labelStyle={{ color: 'var(--color-text-muted)', fontSize: 11 }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Line type="monotone" dataKey="score" name="Composite" stroke="var(--color-primary)" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                    <Line type="monotone" dataKey="accuracy" name="Accuracy" stroke="#4ade80" strokeWidth={1.5} dot={false} strokeDasharray="4 4" />
+                    <Line type="monotone" dataKey="speed" name="Speed" stroke="#fbbf24" strokeWidth={1.5} dot={false} strokeDasharray="4 4" />
+                    <Line type="monotone" dataKey="mastery" name="Mastery" stroke="#60a5fa" strokeWidth={1.5} dot={false} strokeDasharray="4 4" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Score Breakdown */}
+            <div className={styles.insightsCard}>
+              <div className={styles.insightsTitle}><IconTrophy width={15} height={15} /> Score Breakdown</div>
+              {!latestScore ? (
+                <div className="text-sm text-muted">Complete a Miscellaneous test to see your score breakdown.</div>
+              ) : (
+                <>
+                  <div className={styles.insightItem} style={{ flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <span><strong>Accuracy</strong> (60% weight)</span>
+                      <span style={{ fontWeight: 700 }}>{Math.round(latestScore.accuracy_component)}%</span>
+                    </div>
+                    <div className="progress-track"><div className="progress-fill" style={{ width: `${latestScore.accuracy_component}%` }} /></div>
+                  </div>
+                  <div className={styles.insightItem} style={{ flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <span><strong>Speed</strong> (20% weight)</span>
+                      <span style={{ fontWeight: 700 }}>{Math.round(latestScore.speed_component)}%</span>
+                    </div>
+                    <div className="progress-track"><div className="progress-fill warning" style={{ width: `${latestScore.speed_component}%` }} /></div>
+                  </div>
+                  <div className={styles.insightItem} style={{ flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <span><strong>Difficulty Mastery</strong> (20% weight)</span>
+                      <span style={{ fontWeight: 700 }}>{Math.round(latestScore.difficulty_mastery_component)}%</span>
+                    </div>
+                    <div className="progress-track"><div className="progress-fill" style={{ width: `${latestScore.difficulty_mastery_component}%` }} /></div>
+                  </div>
+                  <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    Misc Tests Completed: <strong style={{ color: 'var(--color-text)' }}>{latestScore.misc_tests_completed ?? 0}</strong>
+                    {latestScore.misc_tests_completed < 5 && (
+                      <span> — need {5 - (latestScore.misc_tests_completed ?? 0)} more to unlock Company Tests</span>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
